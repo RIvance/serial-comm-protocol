@@ -1,5 +1,5 @@
-#ifndef SERIAL_PORT_LIBRARY_HPP
-#define SERIAL_PORT_LIBRARY_HPP
+#ifndef SERIAL_PORT_CONTROL
+#define SERIAL_PORT_CONTROL
 
 #include <string>
 #include <cstddef>
@@ -92,4 +92,4 @@ EXPORT class SerialPort
     int receive(void* data, size_t size) const;
 };
 
-#endif //SERIAL_PORT_LIBRARY_HPP
+#endif // SERIAL_PORT_CONTROL
