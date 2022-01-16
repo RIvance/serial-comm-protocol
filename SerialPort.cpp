@@ -6,7 +6,6 @@
 
 #include <unistd.h>  /* UNIX standard function definitions */
 #include <fcntl.h>   /* File control definitions */
-#include <termios.h> /* POSIX terminal control definitions */
 
 #include <sys/stat.h>
 
@@ -104,7 +103,7 @@ inline int _baud(int baudRate)
 }; // end extern "C"
 #endif
 
-bool SerialPort::open(const String &ttyPathname, int baudRate, int flags)
+bool SerialPort::open(const String & ttyPathname, int baudRate, int flags)
 {
     if ((baudRate = BAUD(baudRate)) == -1) return false;
     this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | flags);
@@ -174,5 +173,18 @@ void SerialPort::removeFlag(int flag) const
 
 int SerialPort::receive(void *data, size_t size) const
 {
-    return read(this->fileDescriptor, data, size);
+    return (int) read(this->fileDescriptor, data, size);
+}
+
+int SerialPort::send(const std::vector<unsigned char> & data) const
+{
+    return this->send((void*) data.data(), data.size());
+}
+
+std::vector<unsigned char> SerialPort::receive(size_t size) const
+{
+    std::vector<unsigned char> data(size);
+    ssize_t len = this->receive(data.data(), size);
+    if (len >= 0) data.resize(len);
+    return data;
 }

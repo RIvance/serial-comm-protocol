@@ -2,8 +2,11 @@
 #define SERIAL_PORT_CONTROL
 
 #include <string>
+#include <vector>
 #include <cstddef>
 #include <cstdint>
+
+#include <termios.h> /* POSIX terminal control definitions */
 
 #define EXPORT
 
@@ -76,6 +79,13 @@ EXPORT class SerialPort
 
     /**
      * Send a data struct to serial port
+     * @param data data vector
+     * @return number of successfully sent bytes
+     */
+    int send(const std::vector<unsigned char> & data) const;
+
+    /**
+     * Send a data struct to serial port
      * @tparam T struct type
      * @param data data struct itself
      * @return number of successfully sent bytes
@@ -90,6 +100,13 @@ EXPORT class SerialPort
      * @return number of successfully received bytes
      */
     int receive(void* data, size_t size) const;
+
+    /**
+     * Receive bytes from serial port
+     * @param size length of data
+     * @return data vector
+     */
+    std::vector<unsigned char> receive(size_t size) const;
 };
 
 #endif // SERIAL_PORT_CONTROL

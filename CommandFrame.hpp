@@ -28,7 +28,7 @@ class Option
 
     explicit Option(Tp obj) : object(mov(obj)), isPresent(true) { }
 
-    Tp except() const
+    inline Tp except() const
     {
         if (this->isPresent) {
             return object;
@@ -37,11 +37,16 @@ class Option
         }
     }
 
-    void ifPresent(const Consumer & consumer) const
+    inline void ifPresent(const Consumer & consumer) const
     {
         if (this->isPresent) {
             consumer(object);
         }
+    }
+
+    inline static Option<Tp> empty()
+    {
+        return Option<Tp>();
     }
 };
 
@@ -99,6 +104,26 @@ class CommandFrame
         this->commandFrame.crc16Value = crc16.compute(7 + commandFrame.dataLength);
     }
 
+    static constexpr size_t dataSize()
+    {
+        return sizeof(DataType);
+    }
+
+    static Option<DataType> parse(const Vec<byte_t> & data)
+    {
+        if (data.size() != dataSize()) {
+            return Option<DataType>::empty();
+        } else {
+            CommandFrame<DataType> frame;
+            frame.commandFrame = *reinterpret_cast<RawCommandFrame<DataType>*>(data.data());
+            if (frame.isValid()) {
+                return Option<DataType>(frame);
+            } else {
+                return Option<DataType>::empty();
+            }
+        }
+    }
+
     RawCommandFrame<DataType> getFrame() const
     {
         return commandFrame;
@@ -114,7 +139,7 @@ class CommandFrame
         if (!this->isValid()) {
             return commandFrame.data;
         } else {
-            return Option<DataType>();
+            return Option<DataType>::empty();
         }
     }
 
