@@ -15,32 +15,15 @@ class CommHandle
 
   public:
 
-    inline explicit CommHandle(const SerialPort & serialPortControl)
-    {
-        this->serialPort = serialPortControl;
-    }
+    explicit CommHandle(const SerialPort & serialPortControl);
 
-    inline explicit CommHandle(const String & tty, int baudRate = B115200)
-    {
-        while (!this->serialPort.open(tty, baudRate)) {
-            std::cout << "Cannot open serial port " << tty << ", retrying..." << std::endl;
-        }
-    }
+    explicit CommHandle(const String & tty, int baudRate = B115200);
 
     template <typename T>
-    int send(int commandId, T data)
-    {
-        CommandFrame<T> frame(commandId, data);
-        return serialPort.send(frame.toBytes());
-    }
+    int send(int commandId, T data);
 
     template <typename T>
-    Option<T> receive()
-    {
-        auto data = serialPort.receive(CommandFrame<T>::dataSize());
-        return CommandFrame<T>::parse(data);
-    }
+    Option<T> receive();
 };
-
 
 #endif //COMMHANDLE_HPP
