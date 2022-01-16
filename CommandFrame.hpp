@@ -1,6 +1,6 @@
 #pragma once
 
-#include "crc.hpp"
+#include "CRC.hpp"
 
 #include <memory>
 #include <vector>
