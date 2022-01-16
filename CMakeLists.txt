@@ -3,4 +3,4 @@ project(serial_port)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_library(serial_port SerialPort.cpp CommHandle.cpp)
+add_executable(serial_port debug.cpp src/SerialPort.cpp src/CommHandle.cpp)

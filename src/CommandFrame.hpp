@@ -14,39 +14,65 @@
 template <typename Tp, typename Alloc = std::allocator<Tp>>
 using Vec = std::vector<Tp, Alloc>;
 
-template <typename Tp>
+template <typename Entity>
 class Option
 {
   private:
 
-    using Consumer = std::function<void(Tp)>;
+    using Consumer = std::function<void(Entity)>;
+    using Producer = std::function<Entity(void)>;
+    using Action = std::function<void(void)>;
 
-    bool isPresent = false;
-    Tp object;
+    bool present = false;
+    Entity entity;
+
+    Option() = default;
 
   public:
 
-    explicit Option(Tp obj) : object(mov(obj)), isPresent(true) { }
+    explicit Option(Entity obj) : entity(mov(obj)), present(true) { }
 
-    inline Tp except() const
+    inline Entity unwarp() const
     {
-        if (this->isPresent) {
-            return object;
+        if (this->present) {
+            return entity;
         } else {
             throw std::exception();
         }
     }
 
-    inline void ifPresent(const Consumer & consumer) const
+    inline Entity unwarpOrElse(const Producer & producer)
     {
-        if (this->isPresent) {
-            consumer(object);
+        if (this->present) {
+            return this->entity;
+        } else {
+            return producer();
         }
     }
 
-    inline static Option<Tp> empty()
+    inline bool isPresent() const
     {
-        return Option<Tp>();
+        return present;
+    }
+
+    inline Option<Entity> ifPresent(const Consumer & consumer) const
+    {
+        if (this->present) {
+            consumer(entity);
+        }
+        return *this;
+    }
+
+    inline void orElse(const Action & action) const
+    {
+        if (!this->present) {
+            action();
+        }
+    }
+
+    inline static Option<Entity> empty()
+    {
+        return Option<Entity>();
     }
 };
 
@@ -78,6 +104,13 @@ struct RawCommandFrame
 
 #pragma pack(pop)
 
+namespace CommandFrameUtils
+{
+    const static CRC8<0x31,    0xFF,   0x00>   crc8;
+    const static CRC16<0x1021, 0xFFFF, 0x0000> crc16;
+    static byte_t sequence;
+}
+
 template <typename DataType>
 class CommandFrame
 {
@@ -85,23 +118,31 @@ class CommandFrame
 
     using Self = CommandFrame<DataType>;
 
-    const static CRC8<0x31,    0xFF,   0x00>   crc8;
-    const static CRC16<0x1021, 0xFFFF, 0x0000> crc16;
+    RawCommandFrame<DataType> rawFrame;
 
-    static byte_t sequence;
-    RawCommandFrame<DataType> commandFrame;
+    inline uint8_t crc8() const
+    {
+        return CommandFrameUtils::crc8.compute((byte_t *) &rawFrame, 4);
+    }
+
+    inline uint16_t crc16() const
+    {
+        return CommandFrameUtils::crc16.compute((byte_t *) &rawFrame, 7 + rawFrame.dataLength);
+    }
+
+    CommandFrame() = default;
 
   public:
 
     explicit CommandFrame(int commandId, const DataType & data)
     {
-        this->commandFrame.sof = 0x05;
-        this->commandFrame.dataLength = sizeof(data);
-        this->commandFrame.sequence = sequence++;
-        this->commandFrame.crc8Value = crc8.compute(&commandFrame, 4);
-        this->commandFrame.commandId = commandId;
-        this->commandFrame.data = data;
-        this->commandFrame.crc16Value = crc16.compute(7 + commandFrame.dataLength);
+        this->rawFrame.sof = 0x05;
+        this->rawFrame.dataLength = sizeof(data);
+        this->rawFrame.sequence = CommandFrameUtils::sequence++;
+        this->rawFrame.crc8Value = crc8();
+        this->rawFrame.commandId = commandId;
+        this->rawFrame.data = data;
+        this->rawFrame.crc16Value = crc16();
     }
 
     static constexpr size_t dataSize()
@@ -109,15 +150,20 @@ class CommandFrame
         return sizeof(DataType);
     }
 
+    static constexpr size_t frameSize()
+    {
+        return sizeof(Self);
+    }
+
     static Option<DataType> parse(const Vec<byte_t> & data)
     {
-        if (data.size() != dataSize()) {
+        if (data.size() != frameSize() || data[0] != 0x05) {
             return Option<DataType>::empty();
         } else {
             CommandFrame<DataType> frame;
-            frame.commandFrame = *reinterpret_cast<RawCommandFrame<DataType>*>(data.data());
-            if (frame.isValid()) {
-                return Option<DataType>(frame);
+            frame.rawFrame = *reinterpret_cast<const RawCommandFrame<DataType>*>(data.data());
+            if (frame.validate()) {
+                return Option<DataType>(frame.getData());
             } else {
                 return Option<DataType>::empty();
             }
@@ -126,18 +172,22 @@ class CommandFrame
 
     RawCommandFrame<DataType> getFrame() const
     {
-        return commandFrame;
+        return rawFrame;
     }
 
-    bool isValid()
+    bool validate() const
     {
-        return commandFrame.sof == 0x05;
+        return (
+            rawFrame.sof  == 0x05 &&
+            this->crc8()  == rawFrame.crc8Value &&
+            this->crc16() == rawFrame.crc16Value
+        );
     }
 
     Option<DataType> getData() const
     {
-        if (!this->isValid()) {
-            return commandFrame.data;
+        if (this->validate()) {
+            return Option<DataType>(rawFrame.data);
         } else {
             return Option<DataType>::empty();
         }
@@ -146,7 +196,7 @@ class CommandFrame
     Vec<byte_t> toBytes() const
     {
         Vec<byte_t> bytes(sizeof(Self));
-        auto* ptr = reinterpret_cast<byte_t*>(&commandFrame);
+        const auto* ptr = reinterpret_cast<const byte_t*>(&rawFrame);
         for (size_t i = 0; i < bytes.size(); i++, ptr++) {
             bytes[i] = *ptr;
         }

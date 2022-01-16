@@ -27,7 +27,7 @@ class CRC
     
     byte_t reflectByte(byte_t dataByte) const
     {
-        if (this->doReflectData) {
+        if (doReflectData) {
             byte_t reflection = 0x0;
             for (byte_t bit = 0; bit < 8; bit++) {
                 if ((dataByte & 1) == 1)
@@ -41,7 +41,7 @@ class CRC
 
     uint64_t reflectRemainder(uint64_t data) const
     {
-        if (this->doReflectRemainder) {
+        if (doReflectRemainder) {
             uint64_t reflection = 0;
             auto nbits = (byte_t) (width < 8 ? 8 : width);
 
@@ -67,7 +67,7 @@ class CRC
 
     uint64_t compute(byte_t* data, int length) const
     {
-        uint64_t crcValue = this->initialXOR;
+        uint64_t crcValue = initialXOR;
 
         if (width < 8) {
             for (int i = 0; i < length; i++) {
@@ -76,7 +76,7 @@ class CRC
                 for (byte_t bit = 8; bit > 0; bit--) {
                     crcValue <<= 1;
                     if (((dataByte ^ crcValue) & getTopBit()) > 0)
-                        crcValue ^= this->polynomial;
+                        crcValue ^= polynomial;
                     dataByte <<= 1;
                 }
             }
@@ -89,7 +89,7 @@ class CRC
 
                 for (byte_t bit = 8; bit > 0; bit--) {
                     if ((crcValue & getTopBit()) > 0)
-                        crcValue = (crcValue << 1) ^ this->polynomial;
+                        crcValue = (crcValue << 1) ^ polynomial;
                     else
                         crcValue <<= 1;
                 }
@@ -102,13 +102,13 @@ class CRC
             crcValue = (crcValue << (8 - width));
         }
 
-        crcValue = (reflectRemainder(crcValue) ^ this->finalXOR) & getCrcMask();
+        crcValue = (reflectRemainder(crcValue) ^ finalXOR) & getCrcMask();
         return crcValue;
     }
 
     uint64_t compute(const std::vector<byte_t> & bytes) const
     {
-        this->compute(bytes.data(), bytes.size());
+        return compute(bytes.data(), bytes.size());
     }
 };
 
