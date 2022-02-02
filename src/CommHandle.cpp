@@ -1,6 +1,8 @@
 
 #include "CommHandle.hpp"
 
+#define func auto
+
 CommHandle::CommHandle(const String & tty, int baudRate)
 {
     while (!this->serialPort.open(tty, baudRate)) {
@@ -9,14 +11,14 @@ CommHandle::CommHandle(const String & tty, int baudRate)
 }
 
 template<typename T>
-int CommHandle::send(int commandId, T data)
+func CommHandle::send(int commandId, T data) -> int
 {
     CommandFrame<T> frame(commandId, data);
     return serialPort.send(frame.toBytes());
 }
 
 template<typename T>
-Option<T> CommHandle::receive()
+func CommHandle::receive() -> Option<T>
 {
     auto data = serialPort.receive(CommandFrame<T>::dataSize());
     return CommandFrame<T>::parse(data);

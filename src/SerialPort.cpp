@@ -9,9 +9,13 @@
 
 #include <sys/stat.h>
 
+#define func auto
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+using byte_t = unsigned char;
 
 /**
  * Open a tty serial port
@@ -19,7 +23,7 @@ extern "C" {
  * @return  File descriptor of the tty device
  * @reference https://www.cmrr.umn.edu/~strupp/serial.html
  */
-int openPort(const char* tty, int flags)
+func openPort(const char* tty, int flags) -> int
 {
     int fd; /* File descriptor for the port */
 
@@ -29,13 +33,10 @@ int openPort(const char* tty, int flags)
      * @def O_NDELAY   non-blocking mode
      */
     fd = open(tty, O_RDWR | O_NOCTTY | O_NDELAY | flags);
-    if (fd == -1)
-    {
+    if (fd == -1) {
         // Could not open the port.
         perror("open_port: Unable to open /dev/ttyf1 - ");
-    }
-    else
-    {
+    } else {
         fcntl(fd, F_SETFL, 0);
     }
 
@@ -45,13 +46,13 @@ int openPort(const char* tty, int flags)
 #define ADD_FLAG(dst, src)  dst |= (src)
 #define RM_FLAG(dst, src)   dst &= ~(src)
 
-inline bool fileAccessible(int fd)
+inline func fileAccessible(int fd) -> bool
 {
     struct stat buf {};
     return fstat(fd, &buf) != -1;
 }
 
-inline int _baud(int baudRate)
+inline func _baud(int baudRate) -> int
 {
     if (baudRate < B0) return -1;
     if (
@@ -103,42 +104,42 @@ inline int _baud(int baudRate)
 }; // end extern "C"
 #endif
 
-bool SerialPort::open(const String & ttyPathname, int baudRate, int flags)
+func SerialPort::open(const String & ttyPathname, int baudRate, int flags) -> bool
 {
     if ((baudRate = BAUD(baudRate)) == -1) return false;
     this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | flags);
     return this->fileDescriptor != -1;
 }
 
-int SerialPort::send(void* data, size_t size) const
+func SerialPort::send(void* data, size_t size) const -> int
 {
     ssize_t bytesWritten = ::write(this->fileDescriptor, data, size);
     return bytesWritten == -1 ? 0 : (int) bytesWritten;
 }
 
 template<typename T>
-int SerialPort::send(T* data) const
+func SerialPort::send(T* data) const -> int
 {
     return this->send(data, sizeof(T));
 }
 
 template<typename T>
-int SerialPort::send(const T & data) const
+func SerialPort::send(const T & data) const -> int
 {
     return this->send(&data, sizeof(T));
 }
 
-bool SerialPort::isOpen() const
+func SerialPort::isOpen() const -> bool
 {
     return ::fileAccessible(this->fileDescriptor);
 }
 
-void SerialPort::close() const
+func SerialPort::close() const -> void
 {
     ::close(this->fileDescriptor);
 }
 
-void SerialPort::setBaudRate(int baud) const
+func SerialPort::setBaudRate(int baud) const -> void
 {
     termios options {};
     // Get the current options for the port
@@ -151,7 +152,7 @@ void SerialPort::setBaudRate(int baud) const
     ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
 }
 
-void SerialPort::addFlag(int flag) const
+func SerialPort::addFlag(int flag) const -> void
 {
     termios options {};
     // Get the current options for the port
@@ -161,7 +162,7 @@ void SerialPort::addFlag(int flag) const
     ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
 }
 
-void SerialPort::removeFlag(int flag) const
+func SerialPort::removeFlag(int flag) const -> void
 {
     termios options {};
     // Get the current options for the port
@@ -171,19 +172,19 @@ void SerialPort::removeFlag(int flag) const
     ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
 }
 
-int SerialPort::receive(void *data, size_t size) const
+func SerialPort::receive(void *data, size_t size) const -> int
 {
     return (int) read(this->fileDescriptor, data, size);
 }
 
-int SerialPort::send(const std::vector<unsigned char> & data) const
+func SerialPort::send(const std::vector<unsigned char> & data) const -> int
 {
     return this->send((void*) data.data(), data.size());
 }
 
-std::vector<unsigned char> SerialPort::receive(size_t size) const
+func SerialPort::receive(size_t size) const -> std::vector<byte_t>
 {
-    std::vector<unsigned char> data(size);
+    std::vector<byte_t> data(size);
     ssize_t len = this->receive(data.data(), size);
     if (len >= 0) data.resize(len);
     return data;
