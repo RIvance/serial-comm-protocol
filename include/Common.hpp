@@ -79,76 +79,8 @@ using WRef = std::weak_ptr<Tp>;
 
 // Defs
 
-#define str     std::to_string
-#define $       std::make_shared
-#define mov(_x) std::move(_x)
-
 #define NOP
 #define EMPTY_STATEMENT { }
 #define INVALID_STATE(Tp)  ((Tp) NULL, exit(1))
-
-// Option
-
-template <typename Entity>
-class Option
-{
-  private:
-
-    using Consumer = std::function<void(Entity)>;
-    using Producer = std::function<Entity(void)>;
-    using Action = std::function<void(void)>;
-
-    bool present = false;
-    Entity entity;
-
-    Option() = default;
-
-  public:
-
-    explicit Option(Entity obj) : entity(mov(obj)), present(true) { }
-
-    inline Entity unwarp() const
-    {
-        if (this->present) {
-            return entity;
-        } else {
-            throw std::exception();
-        }
-    }
-
-    inline Entity unwarpOrElse(const Producer & producer)
-    {
-        if (this->present) {
-            return this->entity;
-        } else {
-            return producer();
-        }
-    }
-
-    inline bool isPresent() const
-    {
-        return present;
-    }
-
-    inline Option<Entity> & ifPresent(const Consumer & consumer)
-    {
-        if (this->present) {
-            consumer(entity);
-        }
-        return *this;
-    }
-
-    inline void orElse(const Action & action) const
-    {
-        if (!this->present) {
-            action();
-        }
-    }
-
-    inline static Option<Entity> empty()
-    {
-        return Option<Entity>();
-    }
-};
 
 #endif // COMMON_HPP

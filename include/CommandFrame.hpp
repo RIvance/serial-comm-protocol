@@ -1,7 +1,8 @@
 #pragma once
 
 #include "CRC.hpp"
-#include "Common.h"
+#include "Common.hpp"
+#include "Option.hpp"
 
 #include <memory>
 #include <vector>
@@ -136,6 +137,8 @@ class CommandFrame
         for (size_t i = 0; i < bytes.size(); i++, ptr++) {
             bytes[i] = *ptr;
         }
-        return std::forward<Vec<byte_t>>(bytes);
+        return std::move(bytes);
     }
 };
+
+#undef mov
