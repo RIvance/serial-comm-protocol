@@ -123,7 +123,7 @@ class Option
     void ifPresent(const Consumer & consumer)
     {
         if (isPresent()) {
-            consumer(std::forward<Data>(unwrap()));
+            consumer(unwrap());
         }
     }
 

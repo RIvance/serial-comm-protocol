@@ -9,10 +9,6 @@
 #include <functional>
 #include <cstdint>
 
-#ifndef mov
-  #define mov(_x) std::move(_x)
-#endif
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 | Field | Offset   | Length (bytes) | Description                                          |
 | ----- | -------- | -------------- | ---------------------------------------------------- |
@@ -95,14 +91,14 @@ class CommandFrame
     static Option<DataType> parse(const Vec<byte_t> & data)
     {
         if (data.size() != frameSize() || data[0] != 0x05) {
-            return Option<DataType>::empty();
+            return Option<DataType>::None();
         } else {
             CommandFrame<DataType> frame;
             frame.rawFrame = *reinterpret_cast<const RawCommandFrame<DataType>*>(data.data());
             if (frame.validate()) {
                 return Option<DataType>(frame.getData());
             } else {
-                return Option<DataType>::empty();
+                return Option<DataType>::None();
             }
         }
     }
@@ -126,7 +122,7 @@ class CommandFrame
         if (this->validate()) {
             return Option<DataType>(rawFrame.data);
         } else {
-            return Option<DataType>::empty();
+            return Option<DataType>::None();
         }
     }
 
@@ -140,5 +136,3 @@ class CommandFrame
         return std::move(bytes);
     }
 };
-
-#undef mov
