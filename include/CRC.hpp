@@ -14,6 +14,8 @@
 
 typedef unsigned char byte_t;
 
+
+
 template <
     byte_t width, uint32_t polynomial,
     uint32_t initialXOR, uint32_t finalXOR,
@@ -21,92 +23,110 @@ template <
 >
 class CRC
 {
-  public:
+  private:
 
     CRC() = default;
-    
-    byte_t reflectByte(byte_t dataByte) const
+
+  public:
+
+    class CrcIterator
     {
-        if (doReflectData) {
-            byte_t reflection = 0x0;
-            for (byte_t bit = 0; bit < 8; bit++) {
-                if ((dataByte & 1) == 1)
-                    reflection |= (byte_t) (1 << (7 - bit));
-                dataByte >>= 1;
+      private:
+
+        uint64_t value = initialXOR;
+
+        static byte_t reflectByte(byte_t dataByte)
+        {
+            if (doReflectData) {
+                byte_t reflection = 0x0;
+                for (byte_t bit = 0; bit < 8; bit++) {
+                    if ((dataByte & 1) == 1)
+                        reflection |= (byte_t) (1 << (7 - bit));
+                    dataByte >>= 1;
+                }
+                return reflection;
             }
-            return reflection;
+            return dataByte;
         }
-        return dataByte;
-    }
 
-    uint64_t reflectRemainder(uint64_t data) const
-    {
-        if (doReflectRemainder) {
-            uint64_t reflection = 0;
-            auto nbits = (byte_t) (width < 8 ? 8 : width);
+        static uint64_t reflectRemainder(uint64_t data)
+        {
+            if (doReflectRemainder) {
+                uint64_t reflection = 0;
+                auto nbits = (byte_t) (width < 8 ? 8 : width);
 
-            for (byte_t bit = 0; bit < nbits; bit++) {
-                if ((data & 1) == 1)
-                    reflection |= 1ul << ((nbits - 1) - bit);
-                data >>= 1;
+                for (byte_t bit = 0; bit < nbits; bit++) {
+                    if ((data & 1) == 1)
+                        reflection |= 1ul << ((nbits - 1) - bit);
+                    data >>= 1;
+                }
+                return reflection;
             }
-            return reflection;
+            return data;
         }
-        return data;
-    }
 
-    inline uint64_t getTopBit() const
-    {
-        return (width < 8) ? 1ul << 7 : 1ul << (width - 1);
-    }
+        static inline uint64_t getTopBit()
+        {
+            return (width < 8) ? 1ul << 7 : 1ul << (width - 1);
+        }
 
-    inline uint64_t getCrcMask() const
-    {
-        return (width < 8) ? (1ul << 8) - 1 : (1ul << width) - 1;
-    }
+        static inline uint64_t getCrcMask()
+        {
+            return (width < 8) ? (1ul << 8) - 1 : (1ul << width) - 1;
+        }
 
-    uint64_t compute(byte_t* data, int length) const
-    {
-        uint64_t crcValue = initialXOR;
+      public:
 
-        if (width < 8) {
-            for (int i = 0; i < length; i++) {
-                byte_t currentByte = *(data++);
-                byte_t dataByte = reflectByte(currentByte);
+        CrcIterator() = default;
+
+        void computeNext(byte_t byte)
+        {
+            if (width < 8) {
+                byte_t dataByte = reflectByte(byte);
                 for (byte_t bit = 8; bit > 0; bit--) {
-                    crcValue <<= 1;
-                    if (((dataByte ^ crcValue) & getTopBit()) > 0)
-                        crcValue ^= polynomial;
+                    value <<= 1;
+                    if (((dataByte ^ value) & getTopBit()) > 0) {
+                        value ^= polynomial;
+                    }
                     dataByte <<= 1;
                 }
-            }
-        }
-        else {
-            for (int i = 0; i < length; i++) {
-                byte_t currentByte = *(data++);
-                byte_t dataByte = reflectByte(currentByte);
-                crcValue ^= (uint64_t) (dataByte << (width - 8));
-
+            } else {
+                byte_t dataByte = reflectByte(byte);
+                value ^= (uint64_t) (dataByte << (width - 8));
                 for (byte_t bit = 8; bit > 0; bit--) {
-                    if ((crcValue & getTopBit()) > 0)
-                        crcValue = (crcValue << 1) ^ polynomial;
-                    else
-                        crcValue <<= 1;
+                    if ((value & getTopBit()) > 0) {
+                        value = (value << 1) ^ polynomial;
+                    } else {
+                        value <<= 1;
+                    }
                 }
             }
         }
 
-        crcValue &= getCrcMask();
+        uint64_t getValue()
+        {
+            value &= getCrcMask();
 
-        if (width < 8) {
-            crcValue = (crcValue << (8 - width));
+            if (width < 8) {
+                value = (value << (8 - width));
+            }
+
+            value = (reflectRemainder(value) ^ finalXOR) & getCrcMask();
+            return value;
         }
 
-        crcValue = (reflectRemainder(crcValue) ^ finalXOR) & getCrcMask();
-        return crcValue;
+    };
+
+    static uint64_t compute(byte_t* data, int length)
+    {
+        CrcIterator iterator;
+        for (size_t i = 0; i < length; i++) {
+            iterator.computeNext(data[i]);
+        }
+        return iterator.getValue();
     }
 
-    uint64_t compute(const std::vector<byte_t> & bytes) const
+    static uint64_t compute(const std::vector<byte_t> & bytes)
     {
         return compute(bytes.data(), bytes.size());
     }

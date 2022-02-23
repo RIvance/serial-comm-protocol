@@ -39,8 +39,8 @@ struct RawCommandFrame
 
 namespace CommandFrameUtils
 {
-    const static CRC8<0x31,    0xFF,   0x00>   crc8;
-    const static CRC16<0x1021, 0xFFFF, 0x0000> crc16;
+    using Crc8  = CRC8<0x31,    0xFF,   0x00>;
+    using Crc16 = CRC16<0x1021, 0xFFFF, 0x0000>;
     static byte_t sequence;
 }
 
@@ -55,12 +55,12 @@ class CommandFrame
 
     inline uint8_t crc8() const
     {
-        return CommandFrameUtils::crc8.compute((byte_t *) &rawFrame, 4);
+        return CommandFrameUtils::Crc8::compute((byte_t *) &rawFrame, 4);
     }
 
     inline uint16_t crc16() const
     {
-        return CommandFrameUtils::crc16.compute((byte_t *) &rawFrame, 7 + rawFrame.dataLength);
+        return CommandFrameUtils::Crc16::compute((byte_t *) &rawFrame, 7 + rawFrame.dataLength);
     }
 
     CommandFrame() = default;
