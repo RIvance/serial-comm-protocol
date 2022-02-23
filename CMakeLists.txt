@@ -2,9 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(serial-port-control)
 
 set(DEBUG           false)
-set(SAVE_DATAset    false)
-set(SAVE_IMAGE      false)
-set(COUNT_TIME      false)
+set(OPTIMIZATION    true)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -26,4 +24,8 @@ else()
     target_link_libraries(${LIB_NAME} ${OpenCV_LIBS})
 endif()
 
-
+IF(OPTIMIZATION)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+ELSE()
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
+ENDIF()
