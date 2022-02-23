@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 
@@ -17,9 +18,13 @@ EXPORT class SerialPort
 
   private:
 
-    int fileDescriptor;
+    int fileDescriptor {};
 
   public:
+
+    SerialPort() = default;
+
+    explicit SerialPort(const String & tty, int baudRate, int flags = 0x00);
 
     /**
      * Open a serial port

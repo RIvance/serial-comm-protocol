@@ -117,6 +117,11 @@ class CRC
 
     };
 
+    static CrcIterator iterator()
+    {
+        return CrcIterator();
+    }
+
     static uint64_t compute(byte_t* data, int length)
     {
         CrcIterator iterator;
