@@ -12,7 +12,7 @@
 #define func auto
 
 #ifdef __cplusplus
-extern "C" {
+  extern "C" {
 #endif
 
 using byte_t = unsigned char;
@@ -101,8 +101,13 @@ inline func _baud(int baudRate) -> int
 #define BAUD(X) _baud(X)
 
 #ifdef __cplusplus
-}; // end extern "C"
+  }; // end extern "C"
 #endif
+
+SerialPort::SerialPort(const String & tty, int baudRate, int flags)
+{
+    this->open(tty, baudRate, flags);
+}
 
 func SerialPort::open(const String & ttyPathname, int baudRate, int flags) -> bool
 {
