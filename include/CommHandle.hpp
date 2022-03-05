@@ -26,7 +26,7 @@ class CommHandle
     };
 
     using SubscriberPtr = Ref<SubscriberBase>;
-    HashMap<uint16_t, SubscriberPtr> subscribers;
+    std::unordered_map<uint16_t, SubscriberPtr> subscribers;
 
     Mutex serialPortMutex;
     Thread receivingDaemonThread;
@@ -79,10 +79,17 @@ class CommHandle
     explicit CommHandle(const String & tty, int baudRate = B115200);
 
     template <uint16_t Cmd, typename CmdData>
-    Publisher<Cmd, CmdData> publisher();
+    Publisher<Cmd, CmdData> publisher()
+    {
+        return CommHandle::Publisher<Cmd, CmdData>(this->serialPort);
+    }
 
     template <uint16_t Cmd, typename CmdData>
-    void subscribe(Callback<CmdData> callback);
+    void subscribe(Callback<CmdData> callback)
+    {
+        SubscriberPtr subscriber = std::make_shared<Subscriber<Cmd, CmdData>>(callback);
+        subscribers[Cmd] = subscriber;
+    }
 
     bool startReceiving();
 

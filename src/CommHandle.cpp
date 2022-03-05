@@ -15,7 +15,6 @@ CommHandle::CommHandle(const String & tty, int baudRate)
         std::cout << "Cannot open serial port " << tty << ", retrying..." << std::endl;
         std::this_thread::sleep_for(1000ms);
     }
-    this->receivingDaemonThread = Thread();
 }
 
 CommHandle::CommHandle(const SerialPort & serialPortControl)
@@ -23,21 +22,9 @@ CommHandle::CommHandle(const SerialPort & serialPortControl)
     this->serialPort = serialPortControl;
 }
 
-template <uint16_t Cmd, typename CmdData>
-CommHandle::Publisher<Cmd, CmdData> CommHandle::publisher()
+func CommHandle::startReceiving() -> bool
 {
-    return CommHandle::Publisher<Cmd, CmdData>(this->serialPort);
-}
-
-template <uint16_t Cmd, typename CmdData>
-void CommHandle::subscribe(CommHandle::Callback<CmdData> callback)
-{
-    SubscriberPtr subscriber = std::make_shared(Subscriber<Cmd, CmdData>(callback));
-    subscribers[Cmd] = subscriber;
-}
-
-bool CommHandle::startReceiving()
-{
+    this->receivingDaemonThread = Thread(receivingDaemon());
     if (receivingDaemonThread.joinable()) {
         receivingDaemonThread.join();
         return true;
@@ -46,7 +33,7 @@ bool CommHandle::startReceiving()
     }
 }
 
-Thread & CommHandle::getReceivingDaemonThread()
+func CommHandle::getReceivingDaemonThread() -> Thread&
 {
     return this->receivingDaemonThread;
 }
@@ -73,11 +60,10 @@ func CommHandle::receivingDaemon() -> Function<void()>
         | CRC16 | 7 + DLEN | 2              | p = 0x1021, init = 0xFFFF, reflect data  & remainder |
          * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-        enum { SOF, DLEN, SEQ, CRC8, CMD, DATA, CRC16 } state;
+        enum { SOF, DLEN, SEQ, CRC8, CMD, DATA, CRC16 } state = SOF;
 
         uint16_t dataLength;
         uint8_t  sequence = -1;
-        uint8_t  crc8Value;
         uint16_t crc16Value;
         uint16_t command;
 
@@ -103,9 +89,7 @@ func CommHandle::receivingDaemon() -> Function<void()>
 
             for (int i = 0; i < received; i++) {
 
-                byte_t currentByte = received;
-                crc8Iter.computeNext(currentByte);
-                crc16Iter.computeNext(currentByte);
+                byte_t currentByte = buffer[i];
 
                 switch (state) {
 
@@ -113,6 +97,9 @@ func CommHandle::receivingDaemon() -> Function<void()>
                     {
                         if (currentByte == 0x05) {
                             state = DLEN;
+                            offset = 0;
+                            crc8Iter  = Crc8::iterator();
+                            crc16Iter = Crc16::iterator();
                         }
                     }
                     break;
@@ -120,7 +107,7 @@ func CommHandle::receivingDaemon() -> Function<void()>
                     case DLEN:
                     {
                         readToInt16(&dataLength, currentByte);
-                        if (offset == 1) {
+                        if (offset == 2) {
                             offset = 0;
                             state = SEQ;
                         }
@@ -143,8 +130,6 @@ func CommHandle::receivingDaemon() -> Function<void()>
                         if (crc8Iter.getValue() == currentByte) {
                             state = CMD;
                         } else {
-                            crc8Iter = Crc8::iterator();
-                            crc16Iter = Crc16::iterator();
                             state = SOF;
                         }
                     }
@@ -153,7 +138,7 @@ func CommHandle::receivingDaemon() -> Function<void()>
                     case CMD:
                     {
                         readToInt16(&command, currentByte);
-                        if (offset == 1) {
+                        if (offset == 2) {
                             offset = 0;
                             state = DATA;
                         }
@@ -174,20 +159,23 @@ func CommHandle::receivingDaemon() -> Function<void()>
                     case CRC16:
                     {
                         readToInt16(&crc16Value, currentByte);
-                        if (offset == 1) {
+                        if (offset == 2) {
                             offset = 0;
                             state = SOF;
                             if (crc16Iter.getValue() == crc16Value) {
                                 subscribers[command]->receive(dataBuffer.data());
                             }
-                            crc8Iter = Crc8::iterator();
-                            crc16Iter = Crc16::iterator();
                             dataBuffer.clear();
                         }
                     }
                     break;
 
                 }   // end switch
+
+                if (state != SOF && state != CRC16) {
+                    crc8Iter.computeNext(currentByte);
+                    crc16Iter.computeNext(currentByte);
+                }
 
             }   // end for
 
