@@ -64,7 +64,7 @@ func CommHandle::receivingDaemon() -> Function<void()>
 
         uint16_t dataLength;
         uint8_t  sequence = -1;
-        uint16_t crc16Value;
+        uint16_t crc16Value = 0;
         uint16_t command;
 
         Crc8::CrcIterator crc8Iter;
@@ -116,11 +116,13 @@ func CommHandle::receivingDaemon() -> Function<void()>
 
                     case SEQ:
                     {
+                      #ifdef ABANDON_SAME_FRAME
                         if (currentByte == sequence) {
                             abandonFrame = true;
                         } else {
                             sequence = currentByte;
                         }
+                      #endif
                         state = CRC8;
                     }
                     break;
@@ -147,11 +149,13 @@ func CommHandle::receivingDaemon() -> Function<void()>
 
                     case DATA:
                     {
-                        if (offset++ < dataLength) {
+                        if (++offset <= dataLength) {
                             dataBuffer.emplace_back(currentByte);
-                        } else {
+                        }
+                        if (offset == dataLength){
                             offset = 0;
                             state = CRC16;
+                            crc16Iter.computeNext(currentByte);
                         }
                     }
                     break;
@@ -162,9 +166,10 @@ func CommHandle::receivingDaemon() -> Function<void()>
                         if (offset == 2) {
                             offset = 0;
                             state = SOF;
-                            if (crc16Iter.getValue() == crc16Value) {
+                            if (!abandonFrame && crc16Iter.getValue() == crc16Value) {
                                 subscribers[command]->receive(dataBuffer.data());
                             }
+                            crc16Value = 0;
                             dataBuffer.clear();
                         }
                     }

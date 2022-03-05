@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(serial-port-control)
 
-set(DEBUG           false)
-set(OPTIMIZATION    true)
+set(DEBUG               false)
+set(OPTIMIZATION        true)
+set(ABANDON_SAME_FRAME  false)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -15,6 +16,10 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 find_package(Threads REQUIRED)
+
+if(ABANDON_SAME_FRAME)
+    add_compile_definitions(ABANDON_SAME_FRAME)
+endif()
 
 if(DEBUG)
     add_executable(${BIN_NAME} debug.cpp ${sourcefiles})
