@@ -15,7 +15,6 @@
 typedef unsigned char byte_t;
 
 
-
 template <
     byte_t width, uint32_t polynomial,
     uint32_t initialXOR, uint32_t finalXOR,
@@ -122,7 +121,7 @@ class CRC
         return CrcIterator();
     }
 
-    static uint64_t compute(byte_t* data, int length)
+    static uint64_t compute(const byte_t* data, size_t length)
     {
         CrcIterator iterator;
         for (size_t i = 0; i < length; i++) {
@@ -152,7 +151,7 @@ template <
     uint32_t initialXOR, uint32_t finalXOR,
     bool doReflectData = true, bool doReflectRemainder = true
 > using CRC16 = CRC<
-    0x08, polynomial,
+    0x10, polynomial,
     initialXOR, finalXOR,
     doReflectData, doReflectRemainder
 >;
