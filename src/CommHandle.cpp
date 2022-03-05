@@ -87,6 +87,10 @@ func CommHandle::receivingDaemon() -> Function<void()>
             size_t received = this->serialPort.receive(buffer, BUFFER_SIZE);
             this->serialPortMutex.unlock();
 
+            if (received == -1) {
+                continue;
+            }
+
             for (int i = 0; i < received; i++) {
 
                 byte_t currentByte = buffer[i];

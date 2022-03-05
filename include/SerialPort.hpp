@@ -29,11 +29,15 @@ EXPORT class SerialPort
     /**
      * Open a serial port
      * @param tty tty pathname like "/dev/ttyUSB0"
-     * @param flags additional flags like CBAUD, CSIZE, ...
+     * @param baudRate
+     * @param cflag control mode flags
+     * @param iflag input mode flags
+     * @param oflag output mode flags
+     * @param oflag local mode flags
      * @return true if the serial port is
      *     successfully opened else return false
      */
-    bool open(const String & tty, int baudRate, int flags = 0x00);
+    bool open(const String & tty, int baudRate, int cflag = CS8 | CLOCAL | CREAD, int iflag = 0, int oflag = 0, int lflag = 0);
 
     /**
      * Check if the port is open

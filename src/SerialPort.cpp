@@ -23,7 +23,7 @@ using byte_t = unsigned char;
  * @return  File descriptor of the tty device
  * @reference https://www.cmrr.umn.edu/~strupp/serial.html
  */
-func openPort(const char* tty, int flags) -> int
+func openPort(const char* tty, int cflag, int iflag, int oflag, int lflag) -> int
 {
     int fd; /* File descriptor for the port */
 
@@ -32,10 +32,24 @@ func openPort(const char* tty, int flags) -> int
      * @def O_NOCTTY   prevent the process to be a tty control process
      * @def O_NDELAY   non-blocking mode
      */
-    fd = open(tty, O_RDWR | O_NOCTTY | O_NDELAY | flags);
+    fd = open(tty, O_RDWR | O_NOCTTY | O_NDELAY | oflag);
+    struct termios oldTermios = { 0 };
+    struct termios newTermios = { 0 };
+    tcgetattr(fd, &oldTermios);
+
+    newTermios.c_cflag = CS8 | CLOCAL | CREAD | cflag;
+    newTermios.c_iflag = iflag; // IGNPAR | ICRNL
+    newTermios.c_oflag = oflag;
+    newTermios.c_lflag = lflag; // ICANON
+    newTermios.c_cc[VTIME] = 0;
+    newTermios.c_cc[VMIN] = 1;
+
+    tcflush(fd, TCIOFLUSH);
+    tcsetattr(fd, TCSANOW, &newTermios);
+
     if (fd == -1) {
         // Could not open the port.
-        perror("open_port: Unable to open /dev/ttyf1 - ");
+        perror(("open_port: Unable to open" + String(tty)).c_str());
     } else {
         fcntl(fd, F_SETFL, 0);
     }
@@ -109,10 +123,10 @@ SerialPort::SerialPort(const String & tty, int baudRate, int flags)
     this->open(tty, baudRate, flags);
 }
 
-func SerialPort::open(const String & ttyPathname, int baudRate, int flags) -> bool
+func SerialPort::open(const String & ttyPathname, int baudRate, int cflag, int iflag, int oflag, int lflag) -> bool
 {
     if ((baudRate = BAUD(baudRate)) == -1) return false;
-    this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | flags);
+    this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | cflag, iflag, oflag, lflag);
     return this->fileDescriptor != -1;
 }
 
