@@ -14,14 +14,16 @@ file(GLOB_RECURSE sourcefiles "src/*.cpp")
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+find_package(Threads REQUIRED)
+
 if(DEBUG)
     add_executable(${BIN_NAME} debug.cpp ${sourcefiles})
     target_link_libraries(${BIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
-    target_link_libraries(${BIN_NAME} ${OpenCV_LIBS})
+    target_link_libraries(${BIN_NAME} Threads::Threads)
 else()
     ADD_LIBRARY(${LIB_NAME} ${sourcefiles})
     target_link_libraries(${LIB_NAME} ${CMAKE_THREAD_LIBS_INIT})
-    target_link_libraries(${LIB_NAME} ${OpenCV_LIBS})
+    target_link_libraries(${LIB_NAME} Threads::Threads)
 endif()
 
 IF(OPTIMIZATION)
