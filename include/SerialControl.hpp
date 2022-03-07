@@ -13,7 +13,7 @@
 
 using String = std::string;
 
-EXPORT class SerialPort
+EXPORT class SerialControl
 {
 
   private:
@@ -22,9 +22,9 @@ EXPORT class SerialPort
 
   public:
 
-    SerialPort() = default;
+    SerialControl() = default;
 
-    explicit SerialPort(const String & tty, int baudRate, int flags = 0x00);
+    explicit SerialControl(const String & tty, int baudRate, int flags = 0x00);
 
     /**
      * Open a serial port

@@ -1,5 +1,5 @@
 
-#include "CommHandle.hpp"
+#include "SerialCommHandle.hpp"
 #include "CommandFrame.hpp"
 
 #include <iostream>
@@ -9,7 +9,7 @@
 
 using namespace std::literals::chrono_literals;
 
-CommHandle::CommHandle(const String & tty, int baudRate)
+SerialCommHandle::SerialCommHandle(const String & tty, int baudRate)
 {
     while (!this->serialPort.open(tty, baudRate)) {
         std::cout << "Cannot open serial port " << tty << ", retrying..." << std::endl;
@@ -17,12 +17,12 @@ CommHandle::CommHandle(const String & tty, int baudRate)
     }
 }
 
-CommHandle::CommHandle(const SerialPort & serialPortControl)
+SerialCommHandle::SerialCommHandle(const SerialControl & serialPortControl)
 {
     this->serialPort = serialPortControl;
 }
 
-func CommHandle::startReceiving() -> bool
+func SerialCommHandle::startReceiving() -> bool
 {
     this->receivingDaemonThread = Thread(receivingDaemon());
     if (receivingDaemonThread.joinable()) {
@@ -33,12 +33,12 @@ func CommHandle::startReceiving() -> bool
     }
 }
 
-func CommHandle::getReceivingDaemonThread() -> Thread&
+func SerialCommHandle::getReceivingDaemonThread() -> Thread&
 {
     return this->receivingDaemonThread;
 }
 
-func CommHandle::receivingDaemon() -> Function<void()>
+func SerialCommHandle::receivingDaemon() -> Function<void()>
 {
     return [this]() __attribute__((__noreturn__)) -> void
     {
@@ -194,13 +194,13 @@ func CommHandle::receivingDaemon() -> Function<void()>
 }
 
 template <uint16_t Cmd, typename CmdData>
-func CommHandle::Publisher<Cmd, CmdData>::cmd() -> uint8_t
+func SerialCommHandle::Publisher<Cmd, CmdData>::cmd() -> uint8_t
 {
     return Cmd;
 }
 
 template <uint16_t Cmd, typename CmdData>
-func CommHandle::Publisher<Cmd, CmdData>::publish(const CmdData & data) -> bool
+func SerialCommHandle::Publisher<Cmd, CmdData>::publish(const CmdData & data) -> bool
 {
     CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data);
     this->serialPortMutex->lock();

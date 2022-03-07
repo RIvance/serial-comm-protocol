@@ -8,7 +8,7 @@ set(ABANDON_SAME_FRAME  false)
 set(CMAKE_CXX_STANDARD 14)
 
 set(BIN_NAME "run")
-set(LIB_NAME "comm")
+set(LIB_NAME "serial")
 
 file(GLOB_RECURSE sourcefiles "src/*.cpp")
 

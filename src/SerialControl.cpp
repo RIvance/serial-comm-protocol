@@ -1,4 +1,4 @@
-#include "SerialPort.hpp"
+#include "SerialControl.hpp"
 
 #include <cstring>
 #include <cstdio>
@@ -118,47 +118,47 @@ inline func _baud(int baudRate) -> int
   }; // end extern "C"
 #endif
 
-SerialPort::SerialPort(const String & tty, int baudRate, int flags)
+SerialControl::SerialControl(const String & tty, int baudRate, int flags)
 {
     this->open(tty, baudRate, flags);
 }
 
-func SerialPort::open(const String & ttyPathname, int baudRate, int cflag, int iflag, int oflag, int lflag) -> bool
+func SerialControl::open(const String & ttyPathname, int baudRate, int cflag, int iflag, int oflag, int lflag) -> bool
 {
     if ((baudRate = BAUD(baudRate)) == -1) return false;
     this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | cflag, iflag, oflag, lflag);
     return this->fileDescriptor != -1;
 }
 
-func SerialPort::send(void* data, size_t size) const -> int
+func SerialControl::send(void* data, size_t size) const -> int
 {
     ssize_t bytesWritten = ::write(this->fileDescriptor, data, size);
     return bytesWritten == -1 ? 0 : (int) bytesWritten;
 }
 
 template<typename T>
-func SerialPort::send(T* data) const -> int
+func SerialControl::send(T* data) const -> int
 {
     return this->send(data, sizeof(T));
 }
 
 template<typename T>
-func SerialPort::send(const T & data) const -> int
+func SerialControl::send(const T & data) const -> int
 {
     return this->send(&data, sizeof(T));
 }
 
-func SerialPort::isOpen() const -> bool
+func SerialControl::isOpen() const -> bool
 {
     return ::fileAccessible(this->fileDescriptor);
 }
 
-func SerialPort::close() const -> void
+func SerialControl::close() const -> void
 {
     ::close(this->fileDescriptor);
 }
 
-func SerialPort::setBaudRate(int baud) const -> void
+func SerialControl::setBaudRate(int baud) const -> void
 {
     termios options {};
     // Get the current options for the port
@@ -171,7 +171,7 @@ func SerialPort::setBaudRate(int baud) const -> void
     ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
 }
 
-func SerialPort::addFlag(int flag) const -> void
+func SerialControl::addFlag(int flag) const -> void
 {
     termios options {};
     // Get the current options for the port
@@ -181,7 +181,7 @@ func SerialPort::addFlag(int flag) const -> void
     ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
 }
 
-func SerialPort::removeFlag(int flag) const -> void
+func SerialControl::removeFlag(int flag) const -> void
 {
     termios options {};
     // Get the current options for the port
@@ -191,17 +191,17 @@ func SerialPort::removeFlag(int flag) const -> void
     ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
 }
 
-func SerialPort::receive(void *data, size_t size) const -> int
+func SerialControl::receive(void *data, size_t size) const -> int
 {
     return (int) read(this->fileDescriptor, data, size);
 }
 
-func SerialPort::send(const std::vector<unsigned char> & data) const -> int
+func SerialControl::send(const std::vector<unsigned char> & data) const -> int
 {
     return this->send((void*) data.data(), data.size());
 }
 
-func SerialPort::receive(size_t size) const -> std::vector<byte_t>
+func SerialControl::receive(size_t size) const -> std::vector<byte_t>
 {
     std::vector<byte_t> data(size);
     ssize_t len = this->receive(data.data(), size);

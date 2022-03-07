@@ -2,7 +2,7 @@
 #ifndef COMMHANDLE_HPP
 #define COMMHANDLE_HPP
 
-#include "SerialPort.hpp"
+#include "SerialControl.hpp"
 #include "CommandFrame.hpp"
 #include "Option.hpp"
 #include "Common.hpp"
@@ -13,11 +13,11 @@
 using Mutex  = std::mutex;
 using Thread = std::thread;
 
-class CommHandle
+class SerialCommHandle
 {
   private:
 
-    SerialPort serialPort {};
+    SerialControl serialPort {};
 
     struct SubscriberBase
     {
@@ -40,13 +40,13 @@ class CommHandle
     {
       private:
 
-        SerialPort* serialPort;
+        SerialControl* serialPort;
         Mutex* serialPortMutex;
 
         uint8_t cmd();
         bool publish(const CmdData & data);
 
-        explicit Publisher(SerialPort* port, Mutex* mutex)
+        explicit Publisher(SerialControl* port, Mutex* mutex)
             : serialPort(port), serialPortMutex(mutex)
         { EMPTY_STATEMENT }
 
@@ -74,14 +74,14 @@ class CommHandle
 
   public:
 
-    explicit CommHandle(const SerialPort & serialPortControl);
+    explicit SerialCommHandle(const SerialControl & serialPortControl);
 
-    explicit CommHandle(const String & tty, int baudRate = B115200);
+    explicit SerialCommHandle(const String & tty, int baudRate = B115200);
 
     template <uint16_t Cmd, typename CmdData>
     Publisher<Cmd, CmdData> publisher()
     {
-        return CommHandle::Publisher<Cmd, CmdData>(this->serialPort);
+        return SerialCommHandle::Publisher<Cmd, CmdData>(this->serialPort);
     }
 
     template <uint16_t Cmd, typename CmdData>
@@ -97,14 +97,14 @@ class CommHandle
 };
 
 template <uint16_t Cmd, typename CmdData>
-void CommHandle::Subscriber<Cmd, CmdData>::receive(uint8_t* data)
+void SerialCommHandle::Subscriber<Cmd, CmdData>::receive(uint8_t* data)
 {
     auto* cmdData = reinterpret_cast<CmdData*>(data);
     this->callback(*cmdData);
 }
 
 template <uint16_t Cmd, typename CmdData>
-uint16_t CommHandle::Subscriber<Cmd, CmdData>::cmd()
+uint16_t SerialCommHandle::Subscriber<Cmd, CmdData>::cmd()
 {
     return Cmd;
 }
