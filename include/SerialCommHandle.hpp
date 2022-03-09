@@ -44,12 +44,14 @@ class SerialCommHandle
         Mutex* serialPortMutex;
 
         uint8_t cmd();
-        bool publish(const CmdData & data);
 
         explicit Publisher(SerialControl* port, Mutex* mutex)
             : serialPort(port), serialPortMutex(mutex)
         { EMPTY_STATEMENT }
 
+      public:
+
+        bool publish(const CmdData & data);
     };
 
     template <typename CmdData>
