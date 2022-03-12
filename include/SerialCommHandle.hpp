@@ -46,12 +46,14 @@ class SerialCommHandle
         byte_t sof;
 
         uint8_t cmd();
-        bool publish(const CmdData & data);
 
         explicit Publisher(SerialControl* port, Mutex* mutex, byte_t sof = 0x05)
             : serialPort(port), serialPortMutex(mutex), sof(sof)
         { EMPTY_STATEMENT }
 
+      public:
+
+        bool publish(const CmdData & data);
     };
 
     template <typename CmdData>
