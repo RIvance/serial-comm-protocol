@@ -52,6 +52,7 @@ class CommandFrame
     using Self = CommandFrame<DataType>;
 
     RawCommandFrame<DataType> rawFrame;
+    byte_t sof;
 
     inline uint8_t crc8() const
     {
@@ -67,9 +68,10 @@ class CommandFrame
 
   public:
 
-    explicit CommandFrame(int commandId, const DataType & data)
+    explicit CommandFrame(int commandId, const DataType & data, byte_t sof = 0x05)
     {
-        this->rawFrame.sof = 0x05;
+        this->sof = sof;
+        this->rawFrame.sof = sof;
         this->rawFrame.dataLength = sizeof(data);
         this->rawFrame.sequence = CommandFrameUtils::sequence++;
         this->rawFrame.crc8Value = crc8();
@@ -85,15 +87,16 @@ class CommandFrame
 
     static constexpr size_t frameSize()
     {
-        return sizeof(Self);
+        return sizeof(RawCommandFrame<DataType>);
     }
 
-    static Option<DataType> parse(const Vec<byte_t> & data)
+    static Option<DataType> parse(const Vec<byte_t> & data, byte_t sof = 0x05)
     {
-        if (data.size() != frameSize() || data[0] != 0x05) {
+        if (data.size() != frameSize() || data[0] != sof) {
             return Option<DataType>::None();
         } else {
             CommandFrame<DataType> frame;
+            frame.sof = sof;
             frame.rawFrame = *reinterpret_cast<const RawCommandFrame<DataType>*>(data.data());
             if (frame.validate()) {
                 return Option<DataType>(frame.getData());
@@ -111,7 +114,7 @@ class CommandFrame
     bool validate() const
     {
         return (
-            rawFrame.sof  == 0x05 &&
+            rawFrame.sof  == this->sof &&
             this->crc8()  == rawFrame.crc8Value &&
             this->crc16() == rawFrame.crc16Value
         );

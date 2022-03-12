@@ -18,6 +18,7 @@ class SerialCommHandle
   private:
 
     SerialControl serialPort {};
+    byte_t sof = 0x05;
 
     struct SubscriberBase
     {
@@ -42,12 +43,13 @@ class SerialCommHandle
 
         SerialControl* serialPort;
         Mutex* serialPortMutex;
+        byte_t sof;
 
         uint8_t cmd();
         bool publish(const CmdData & data);
 
-        explicit Publisher(SerialControl* port, Mutex* mutex)
-            : serialPort(port), serialPortMutex(mutex)
+        explicit Publisher(SerialControl* port, Mutex* mutex, byte_t sof = 0x05)
+            : serialPort(port), serialPortMutex(mutex), sof(sof)
         { EMPTY_STATEMENT }
 
     };
@@ -74,9 +76,9 @@ class SerialCommHandle
 
   public:
 
-    explicit SerialCommHandle(const SerialControl & serialPortControl);
+    explicit SerialCommHandle(const SerialControl & serialPortControl, byte_t sof = 0x05);
 
-    explicit SerialCommHandle(const String & tty, int baudRate = B115200);
+    explicit SerialCommHandle(const String & tty, int baudRate = B115200, byte_t sof = 0x05);
 
     template <uint16_t Cmd, typename CmdData>
     Publisher<Cmd, CmdData> publisher()

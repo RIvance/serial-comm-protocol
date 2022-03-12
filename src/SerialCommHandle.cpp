@@ -9,16 +9,18 @@
 
 using namespace std::literals::chrono_literals;
 
-SerialCommHandle::SerialCommHandle(const String & tty, int baudRate)
+SerialCommHandle::SerialCommHandle(const String & tty, int baudRate, byte_t sof)
 {
+    this->sof = sof;
     while (!this->serialPort.open(tty, baudRate)) {
         std::cout << "Cannot open serial port " << tty << ", retrying..." << std::endl;
         std::this_thread::sleep_for(1000ms);
     }
 }
 
-SerialCommHandle::SerialCommHandle(const SerialControl & serialPortControl)
+SerialCommHandle::SerialCommHandle(const SerialControl & serialPortControl, byte_t sof)
 {
+    this->sof = sof;
     this->serialPort = serialPortControl;
 }
 
@@ -99,7 +101,7 @@ func SerialCommHandle::receivingDaemon() -> Function<void()>
 
                     case SOF:
                     {
-                        if (currentByte == 0x05) {
+                        if (currentByte == this->sof) {
                             state = DLEN;
                             offset = 0;
                             crc8Iter  = Crc8::iterator();
@@ -202,7 +204,7 @@ func SerialCommHandle::Publisher<Cmd, CmdData>::cmd() -> uint8_t
 template <uint16_t Cmd, typename CmdData>
 func SerialCommHandle::Publisher<Cmd, CmdData>::publish(const CmdData & data) -> bool
 {
-    CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data);
+    CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data, this->sof);
     this->serialPortMutex->lock();
     int sent = this->serialPort->send(commandFrame.toBytes());
     this->serialPortMutex->unlock();
