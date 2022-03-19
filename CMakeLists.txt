@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(serial-port-control)
 
-set(DEBUG               false)
-set(OPTIMIZATION        true)
+set(DEBUG               true)
+set(OPTIMIZATION        false)
 set(ABANDON_SAME_FRAME  false)
 
 set(CMAKE_CXX_STANDARD 14)

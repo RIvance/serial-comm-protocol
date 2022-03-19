@@ -194,20 +194,3 @@ func SerialCommHandle::receivingDaemon() -> Function<void()>
 
     };  // end lambda
 }
-
-template <uint16_t Cmd, typename CmdData>
-func SerialCommHandle::Publisher<Cmd, CmdData>::cmd() -> uint8_t
-{
-    return Cmd;
-}
-
-template <uint16_t Cmd, typename CmdData>
-func SerialCommHandle::Publisher<Cmd, CmdData>::publish(const CmdData & data) -> bool
-{
-    CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data, this->sof);
-    this->serialPortMutex->lock();
-    int sent = this->serialPort->send(commandFrame.toBytes());
-    this->serialPortMutex->unlock();
-    return sent == sizeof(CmdData);
-}
-

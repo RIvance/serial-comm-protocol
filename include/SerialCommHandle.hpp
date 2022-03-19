@@ -10,6 +10,8 @@
 #include <thread>
 #include <mutex>
 
+#define func auto
+
 using Mutex  = std::mutex;
 using Thread = std::thread;
 
@@ -45,7 +47,12 @@ class SerialCommHandle
         Mutex* serialPortMutex;
         byte_t sof;
 
-        uint8_t cmd();
+        func cmd() -> uint16_t
+        {
+            return Cmd;
+        }
+
+        friend class SerialCommHandle;
 
         explicit Publisher(SerialControl* port, Mutex* mutex, byte_t sof = 0x05)
             : serialPort(port), serialPortMutex(mutex), sof(sof)
@@ -53,7 +60,14 @@ class SerialCommHandle
 
       public:
 
-        bool publish(const CmdData & data);
+        func publish(const CmdData & data) -> bool
+        {
+            CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data, this->sof);
+            this->serialPortMutex->lock();
+            int sent = this->serialPort->send(commandFrame.toBytes());
+            this->serialPortMutex->unlock();
+            return sent == sizeof(CmdData);
+        }
     };
 
     template <typename CmdData>
@@ -67,11 +81,20 @@ class SerialCommHandle
       private:
 
         Callback<CmdData> callback;
-        void receive(uint8_t* data) override;
+
+        func receive(uint8_t* data) -> void override
+        {
+            auto* cmdData = reinterpret_cast<CmdData*>(data);
+            this->callback(*cmdData);
+        }
 
       public:
 
-        uint16_t cmd() override;
+        func cmd() -> uint16_t override
+        {
+            return Cmd;
+        }
+
         explicit Subscriber(Callback<CmdData> callback) : callback(callback) { }
 
     };
@@ -85,11 +108,11 @@ class SerialCommHandle
     template <uint16_t Cmd, typename CmdData>
     Publisher<Cmd, CmdData> publisher()
     {
-        return SerialCommHandle::Publisher<Cmd, CmdData>(this->serialPort);
+        return SerialCommHandle::Publisher<Cmd, CmdData>(&this->serialPort, &this->serialPortMutex);
     }
 
     template <uint16_t Cmd, typename CmdData>
-    void subscribe(Callback<CmdData> callback)
+    func subscribe(Callback<CmdData> callback) -> void
     {
         SubscriberPtr subscriber = std::make_shared<Subscriber<Cmd, CmdData>>(callback);
         subscribers[Cmd] = subscriber;
@@ -100,18 +123,6 @@ class SerialCommHandle
     Thread & getReceivingDaemonThread();
 };
 
-template <uint16_t Cmd, typename CmdData>
-void SerialCommHandle::Subscriber<Cmd, CmdData>::receive(uint8_t* data)
-{
-    auto* cmdData = reinterpret_cast<CmdData*>(data);
-    this->callback(*cmdData);
-}
-
-template <uint16_t Cmd, typename CmdData>
-uint16_t SerialCommHandle::Subscriber<Cmd, CmdData>::cmd()
-{
-    return Cmd;
-}
-
+#undef func
 
 #endif // COMMHANDLE_HPP
