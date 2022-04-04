@@ -40,13 +40,18 @@ SerialCommHandle::SerialCommHandle(const String & serialDevice, int baudRate, by
 SerialCommHandle::SerialCommHandle(int baudRate, byte_t sof)
 {
     this->sof = sof;
-    String serialDevice = getSerialDevices().front();
-    while (!this->serialPort.open(serialDevice, baudRate)) {
-        serialDevice = getSerialDevices().front();
-        std::cout << "Unable to serial device " << serialDevice << ", retrying..." << std::endl;
+    Vec<String> serialDevices = getSerialDevices();
+    while (serialDevices.empty() || !this->serialPort.open(serialDevices.front(), baudRate)) {
+        serialDevices = getSerialDevices();
+        if (serialDevices.empty()) {
+            std::cout << "No serial device found, retrying..." << std::endl;
+            std::this_thread::sleep_for(1000ms);
+            continue;
+        }
+        std::cout << "Unable to serial device " << serialDevices.front() << ", retrying..." << std::endl;
         std::this_thread::sleep_for(1000ms);
     }
-    std::cout << "Successfully connected to serial device " << serialDevice << std::endl;
+    std::cout << "Successfully connected to serial device " << serialDevices.front() << std::endl;
 }
 
 SerialCommHandle::SerialCommHandle(const SerialControl & serialPortControl, byte_t sof)
