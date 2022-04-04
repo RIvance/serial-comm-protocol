@@ -124,5 +124,14 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 
+# cache
+cache
+.cache
+
 # debug source
 debug.cpp
+
+# zip files
+*.zip
+*.tar.gz
+*.tar.xz

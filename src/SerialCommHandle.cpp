@@ -4,18 +4,49 @@
 
 #include <iostream>
 #include <thread>
+#include <filesystem>
+#include <regex>
 
 #define func auto
 
 using namespace std::literals::chrono_literals;
+using DirectoryIterator = std::filesystem::directory_iterator;
+using Regex = std::regex;
 
-SerialCommHandle::SerialCommHandle(const String & tty, int baudRate, byte_t sof)
+func getSerialDevices() -> Vec<String>
+{
+    static const Regex SERIAL_DEV_PATTERN("\\/dev\\/tty(USB|ACM)[0-9]+");
+    Vec<String> serialDevices;
+    for (const auto & entry : DirectoryIterator("/dev")) {
+        String path = entry.path();
+        if (std::regex_match(path, SERIAL_DEV_PATTERN)) {
+            serialDevices.emplace_back(path);
+        }
+    }
+    std::sort(serialDevices.begin(), serialDevices.end());
+    return serialDevices;
+}
+
+SerialCommHandle::SerialCommHandle(const String & serialDevice, int baudRate, byte_t sof)
 {
     this->sof = sof;
-    while (!this->serialPort.open(tty, baudRate)) {
-        std::cout << "Cannot open serial port " << tty << ", retrying..." << std::endl;
+    while (!this->serialPort.open(serialDevice, baudRate)) {
+        std::cout << "Unable to open serial device " << serialDevice << ", retrying..." << std::endl;
         std::this_thread::sleep_for(1000ms);
     }
+    std::cout << "Successfully connected to serial device " << serialDevice << std::endl;
+}
+
+SerialCommHandle::SerialCommHandle(int baudRate, byte_t sof)
+{
+    this->sof = sof;
+    String serialDevice = getSerialDevices().front();
+    while (!this->serialPort.open(serialDevice, baudRate)) {
+        serialDevice = getSerialDevices().front();
+        std::cout << "Unable to serial device " << serialDevice << ", retrying..." << std::endl;
+        std::this_thread::sleep_for(1000ms);
+    }
+    std::cout << "Successfully connected to serial device " << serialDevice << std::endl;
 }
 
 SerialCommHandle::SerialCommHandle(const SerialControl & serialPortControl, byte_t sof)

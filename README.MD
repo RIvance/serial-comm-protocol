@@ -17,7 +17,7 @@ struct Vec2f
 
 int main()
 {
-    SerialCommHandle comm("/dev/ttyACM0"); // create a serial communication instance
+    SerialCommHandle comm; // create a serial communication instance
     auto positionPublisher = comm.publisher<CMD_POS, Vec2f>();
 
     while (true)

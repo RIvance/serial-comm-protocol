@@ -103,7 +103,9 @@ class SerialCommHandle
 
     explicit SerialCommHandle(const SerialControl & serialPortControl, byte_t sof = 0x05);
 
-    explicit SerialCommHandle(const String & tty, int baudRate = B115200, byte_t sof = 0x05);
+    explicit SerialCommHandle(const String & serialDevice, int baudRate = B115200, byte_t sof = 0x05);
+
+    explicit SerialCommHandle(int baudRate = B115200, byte_t sof = 0x05);
 
     template <uint16_t Cmd, typename CmdData>
     Publisher<Cmd, CmdData> publisher()

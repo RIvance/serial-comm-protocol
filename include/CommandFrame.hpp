@@ -52,7 +52,7 @@ class CommandFrame
     using Self = CommandFrame<DataType>;
 
     RawCommandFrame<DataType> rawFrame;
-    byte_t sof;
+    byte_t sof = 0x00;
 
     inline uint8_t crc8() const
     {
