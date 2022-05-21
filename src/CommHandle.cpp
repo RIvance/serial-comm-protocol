@@ -1,5 +1,5 @@
 
-#include "serial/SerialCommHandle.hpp"
+#include "serial/CommHandle.hpp"
 #include "serial/command/CommandFrame.hpp"
 
 #include <iostream>
@@ -29,12 +29,12 @@ namespace serial
         return serialDevices;
     }
 
-    SerialCommHandle::SerialCommHandle(const String & serialDevice, int baudRate, byte_t sof)
+    CommHandle::CommHandle(const String & serialDevice, int baudRate, byte_t sof)
     {
         this->openSerialDevice(serialDevice, baudRate, sof);
     }
 
-    SerialCommHandle::SerialCommHandle(int baudRate, byte_t sof)
+    CommHandle::CommHandle(int baudRate, byte_t sof)
     {
         this->sof = sof;
         std::vector<String> serialDevices = getDevices();
@@ -51,13 +51,13 @@ namespace serial
         std::cout << "Successfully connected to serial device " << serialDevices.front() << std::endl;
     }
 
-    SerialCommHandle::SerialCommHandle(const SerialControl & serialPortControl, byte_t sof)
+    CommHandle::CommHandle(const SerialControl & serialPortControl, byte_t sof)
     {
         this->sof = sof;
         this->serialPort = serialPortControl;
     }
 
-    func SerialCommHandle::openSerialDevice(const String & serialDevice, int baudRate, byte_t sof) -> void
+    func CommHandle::openSerialDevice(const String & serialDevice, int baudRate, byte_t sof) -> void
     {
         this->sof = sof;
         while (!this->serialPort.open(serialDevice, baudRate)) {
@@ -67,7 +67,7 @@ namespace serial
         std::cout << "Successfully connected to serial device " << serialDevice << std::endl;
     }
 
-    func SerialCommHandle::startReceiving() -> bool
+    func CommHandle::startReceiving() -> bool
     {
         this->receivingDaemonThread = Thread(receivingDaemon());
         if (receivingDaemonThread.joinable()) {
@@ -78,12 +78,12 @@ namespace serial
         }
     }
 
-    func SerialCommHandle::getReceivingDaemonThread() -> Thread&
+    func CommHandle::getReceivingDaemonThread() -> Thread&
     {
         return this->receivingDaemonThread;
     }
 
-    func SerialCommHandle::receivingDaemon() -> Function<void()>
+    func CommHandle::receivingDaemon() -> Function<void()>
     {
         return [this]() __attribute__((__noreturn__)) -> void
         {

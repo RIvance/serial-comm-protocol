@@ -24,7 +24,7 @@ namespace serial
 
     using namespace command;
 
-    class SerialCommHandle
+    class CommHandle
     {
       private:
 
@@ -61,7 +61,7 @@ namespace serial
                 return Cmd;
             }
 
-            friend class SerialCommHandle;
+            friend class CommHandle;
 
           public:
 
@@ -124,16 +124,16 @@ namespace serial
 
       public:
 
-        explicit SerialCommHandle(const SerialControl & serialPortControl, byte_t sof = 0x05);
+        explicit CommHandle(const SerialControl & serialPortControl, byte_t sof = 0x05);
 
-        explicit SerialCommHandle(const String & serialDevice, int baudRate = B115200, byte_t sof = 0x05);
+        explicit CommHandle(const String & serialDevice, int baudRate = B115200, byte_t sof = 0x05);
 
-        explicit SerialCommHandle(int baudRate = B115200, byte_t sof = 0x05);
+        explicit CommHandle(int baudRate = B115200, byte_t sof = 0x05);
 
         template <uint16_t Cmd, typename CmdData>
         Publisher<Cmd, CmdData> advertise()
         {
-            return SerialCommHandle::Publisher<Cmd, CmdData>(&this->serialPort, &this->serialPortMutex);
+            return CommHandle::Publisher<Cmd, CmdData>(&this->serialPort, &this->serialPortMutex);
         }
 
         template <uint16_t Cmd, typename CmdData>

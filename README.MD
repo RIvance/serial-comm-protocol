@@ -6,9 +6,11 @@
 ### Sender
 
 ```c++
-#include "SerialCommHandle.hpp"
+#include "serial/CommHandle.hpp"
 
 #define CMD_POS 0x01 // command id
+
+using namespace serial;
 
 struct Vec2f
 {
@@ -17,8 +19,8 @@ struct Vec2f
 
 int main()
 {
-    SerialCommHandle comm; // create a serial communication instance
-    auto positionPublisher = comm.publisher<CMD_POS, Vec2f>();
+    CommHandle comm; // create a serial communication instance
+    auto positionPublisher = comm.advertise<CMD_POS, Vec2f>();
 
     while (true)
     {
@@ -32,10 +34,12 @@ int main()
 ### Receiver
 
 ```c++
-#include "SerialCommHandle.hpp"
+#include "CommHandle.hpp"
 #include <iostream>
 
 #define CMD_POS 0x01
+
+using namespace serial;
 
 struct Vec2f
 {
@@ -47,7 +51,7 @@ int main()
     SerialControl serialControl; // you can also open a serial device manually
     serialControl.open("/dev/ttyACM0", B115200);
     
-    SerialCommHandle comm(serialControl);
+    CommHandle comm(serialControl);
     
     comm.subscribe<CMD_POS, Vec2f>( // call back function here
         [](const Vec2f & pos)
