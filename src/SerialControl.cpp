@@ -1,4 +1,4 @@
-#include "SerialControl.hpp"
+#include "serial/SerialControl.hpp"
 
 #include <cstring>
 #include <cstdio>
@@ -49,7 +49,7 @@ func openPort(const char* tty, int cflag, int iflag, int oflag, int lflag) -> in
 
     if (fd == -1) {
         // Could not open the port.
-        perror(("open_port: Unable to open" + String(tty)).c_str());
+        perror(("open_port: Unable to open" + std::string(tty)).c_str());
     } else {
         fcntl(fd, F_SETFL, 0);
     }
@@ -118,93 +118,99 @@ inline func _baud(int baudRate) -> int
   }; // end extern "C"
 #endif
 
-SerialControl::SerialControl(const String & tty, int baudRate, int flags)
+namespace serial
 {
-    this->open(tty, baudRate, flags);
-}
+    SerialControl::SerialControl(const String & tty, int baudRate, int flags)
+    {
+        this->open(tty, baudRate, flags);
+    }
 
-func SerialControl::open(const String & ttyPathname, int baudRate, int cflag, int iflag, int oflag, int lflag) -> bool
-{
-    if ((baudRate = BAUD(baudRate)) == -1) return false;
-    this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | cflag, iflag, oflag, lflag);
-    return this->fileDescriptor != -1;
-}
+    func SerialControl::open(const String & ttyPathname, int baudRate, int cflag, int iflag, int oflag, int lflag) -> bool
+    {
+        if ((baudRate = BAUD(baudRate)) == -1) return false;
+        this->fileDescriptor = ::openPort(ttyPathname.c_str(), baudRate | cflag, iflag, oflag, lflag);
+        return this->fileDescriptor != -1;
+    }
 
-func SerialControl::send(void* data, size_t size) const -> int
-{
-    ssize_t bytesWritten = ::write(this->fileDescriptor, data, size);
-    return bytesWritten == -1 ? 0 : (int) bytesWritten;
-}
+    func SerialControl::send(void* data, size_t size) const -> int
+    {
+        if (this->isOpen()) {
+            throw SerialClosedException();
+        }
+        ssize_t bytesWritten = ::write(this->fileDescriptor, data, size);
+        return bytesWritten == -1 ? 0 : (int) bytesWritten;
+    }
 
-template<typename T>
-func SerialControl::send(T* data) const -> int
-{
-    return this->send(data, sizeof(T));
-}
+    template<typename T>
+    func SerialControl::send(T* data) const -> int
+    {
+        return this->send(data, sizeof(T));
+    }
 
-template<typename T>
-func SerialControl::send(const T & data) const -> int
-{
-    return this->send(&data, sizeof(T));
-}
+    template<typename T>
+    func SerialControl::send(const T & data) const -> int
+    {
+        return this->send(&data, sizeof(T));
+    }
 
-func SerialControl::isOpen() const -> bool
-{
-    return ::fileAccessible(this->fileDescriptor);
-}
+    func SerialControl::isOpen() const -> bool
+    {
+        return ::fileAccessible(this->fileDescriptor);
+    }
 
-func SerialControl::close() const -> void
-{
-    ::close(this->fileDescriptor);
-}
+    func SerialControl::close() const -> void
+    {
+        ::close(this->fileDescriptor);
+    }
 
-func SerialControl::setBaudRate(int baud) const -> void
-{
-    termios options {};
-    // Get the current options for the port
-    ::tcgetattr(this->fileDescriptor, &options);
-    ::cfsetispeed(&options, baud);
-    ::cfsetospeed(&options, baud);
-    // Enable the receiver and set local mode
-    ADD_FLAG(options.c_cflag, CLOCAL | CREAD);
-    // Set the new options for the port
-    ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
-}
+    func SerialControl::setBaudRate(int baud) const -> void
+    {
+        termios options {};
+        // Get the current options for the port
+        ::tcgetattr(this->fileDescriptor, &options);
+        ::cfsetispeed(&options, baud);
+        ::cfsetospeed(&options, baud);
+        // Enable the receiver and set local mode
+        ADD_FLAG(options.c_cflag, CLOCAL | CREAD);
+        // Set the new options for the port
+        ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
+    }
 
-func SerialControl::addFlag(int flag) const -> void
-{
-    termios options {};
-    // Get the current options for the port
-    ::tcgetattr(this->fileDescriptor, &options);
-    ADD_FLAG(options.c_cflag, flag);
-    // Set the new options for the port
-    ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
-}
+    func SerialControl::addFlag(int flag) const -> void
+    {
+        termios options {};
+        // Get the current options for the port
+        ::tcgetattr(this->fileDescriptor, &options);
+        ADD_FLAG(options.c_cflag, flag);
+        // Set the new options for the port
+        ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
+    }
 
-func SerialControl::removeFlag(int flag) const -> void
-{
-    termios options {};
-    // Get the current options for the port
-    ::tcgetattr(this->fileDescriptor, &options);
-    RM_FLAG(options.c_cflag, flag);
-    // Set the new options for the port
-    ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
-}
+    func SerialControl::removeFlag(int flag) const -> void
+    {
+        termios options {};
+        // Get the current options for the port
+        ::tcgetattr(this->fileDescriptor, &options);
+        RM_FLAG(options.c_cflag, flag);
+        // Set the new options for the port
+        ::tcsetattr(this->fileDescriptor, TCSANOW, &options);
+    }
 
-func SerialControl::receive(void *data, size_t size) const -> int
-{
-    return (int) read(this->fileDescriptor, data, size);
-}
+    func SerialControl::receive(void *data, size_t size) const -> int
+    {
+        return (int) read(this->fileDescriptor, data, size);
+    }
 
-func SerialControl::send(const std::vector<unsigned char> & data) const -> int
-{
-    return this->send((void*) data.data(), data.size());
-}
+    func SerialControl::send(const std::vector<unsigned char> & data) const -> int
+    {
+        return this->send((void*) data.data(), data.size());
+    }
 
-func SerialControl::receive(size_t size) const -> std::vector<byte_t>
-{
-    std::vector<byte_t> data(size);
-    ssize_t len = this->receive(data.data(), size);
-    if (len >= 0) data.resize(len);
-    return data;
+    func SerialControl::receive(size_t size) const -> std::vector<byte_t>
+    {
+        std::vector<byte_t> data(size);
+        ssize_t len = this->receive(data.data(), size);
+        if (len >= 0) data.resize(len);
+        return data;
+    }
 }

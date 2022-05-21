@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(serial-port-control)
+project(serial)
 
 set(DEBUG               false)
 set(OPTIMIZATION        false)
