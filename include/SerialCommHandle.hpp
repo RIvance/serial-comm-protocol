@@ -1,16 +1,24 @@
 
-#ifndef COMMHANDLE_HPP
-#define COMMHANDLE_HPP
+#ifndef SERIAL_COMM_HANDLE_HPP
+#define SERIAL_COMM_HANDLE_HPP
 
 #include "SerialControl.hpp"
 #include "CommandFrame.hpp"
-#include "Option.hpp"
-#include "Common.hpp"
 
 #include <thread>
 #include <mutex>
 
 #define func auto
+#define EMPTY_STATEMENT { }
+
+template <typename T>
+using Ref = std::shared_ptr<T>;
+
+template <typename Signature>
+using Function = std::function<Signature>;
+
+template <typename T>
+using Option = std::optional<T>;
 
 using Mutex  = std::mutex;
 using Thread = std::thread;
@@ -54,11 +62,17 @@ class SerialCommHandle
 
         friend class SerialCommHandle;
 
+      public:
+
+        Publisher() = default;
+
+        Publisher(const Publisher & another)
+            : serialPort(another.port), serialPortMutex(another.mutex), sof(sof)
+        { EMPTY_STATEMENT }
+
         explicit Publisher(SerialControl* port, Mutex* mutex, byte_t sof = 0x05)
             : serialPort(port), serialPortMutex(mutex), sof(sof)
         { EMPTY_STATEMENT }
-
-      public:
 
         func publish(const CmdData & data) -> bool
         {
@@ -108,7 +122,7 @@ class SerialCommHandle
     explicit SerialCommHandle(int baudRate = B115200, byte_t sof = 0x05);
 
     template <uint16_t Cmd, typename CmdData>
-    Publisher<Cmd, CmdData> publisher()
+    Publisher<Cmd, CmdData> advertise()
     {
         return SerialCommHandle::Publisher<Cmd, CmdData>(&this->serialPort, &this->serialPortMutex);
     }
@@ -127,4 +141,4 @@ class SerialCommHandle
 
 #undef func
 
-#endif // COMMHANDLE_HPP
+#endif // SERIAL_COMM_HANDLE_HPP

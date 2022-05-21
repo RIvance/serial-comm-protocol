@@ -1,25 +1,29 @@
 #pragma once
 
 #include "CRC.hpp"
-#include "Common.hpp"
-#include "Option.hpp"
 
 #include <memory>
 #include <vector>
 #include <functional>
 #include <cstdint>
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-| Field | Offset   | Length (bytes) | Description                                          |
-| ----- | -------- | -------------- | ---------------------------------------------------- |
-| SOF   | 0        | 1              | Start of Frame, fixed to 0x05                        |
-| DLEN  | 1        | 2              | Length of DATA, little-endian uint16_t               |
-| SEQ   | 3        | 1              | Sequence number                                      |
-| CRC8  | 4        | 1              | p = 0x31, init = 0xFF, reflect data &  remainder     |
-| CMD   | 5        | 2              | Command, little-endian uint16_t                      |
-| DATA  | 7        | DLEN           | Data                                                 |
-| CRC16 | 7 + DLEN | 2              | p = 0x1021, init = 0xFFFF, reflect data  & remainder |
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+| Field | Offset   | Length (bytes) | Description                                           |
+| ----- | -------- | -------------- | ----------------------------------------------------- |
+| SOF   | 0        | 1              | Start of Frame, fixed to 0x05                         |
+| DLEN  | 1        | 2              | Length of DATA, little-endian uint16_t                |
+| SEQ   | 3        | 1              | Sequence number                                       |
+| CRC8  | 4        | 1              | p = 0x31, init = 0xFF, reflect data and remainder     |
+| CMD   | 5        | 2              | Command, little-endian uint16_t                       |
+| DATA  | 7        | DLEN           | Raw data                                              |
+| CRC16 | 7 + DLEN | 2              | p = 0x1021, init = 0xFFFF, reflect data and remainder |
+\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+template <typename T>
+using Vec = std::vector<T>;
+
+template <typename T>
+using Option = std::optional<T>;
 
 #pragma pack(push, 1)
 
@@ -93,7 +97,7 @@ class CommandFrame
     static Option<DataType> parse(const Vec<byte_t> & data, byte_t sof = 0x05)
     {
         if (data.size() != frameSize() || data[0] != sof) {
-            return Option<DataType>::None();
+            return std::nullopt;
         } else {
             CommandFrame<DataType> frame;
             frame.sof = sof;
@@ -101,7 +105,7 @@ class CommandFrame
             if (frame.validate()) {
                 return Option<DataType>(frame.getData());
             } else {
-                return Option<DataType>::None();
+                return std::nullopt;
             }
         }
     }
@@ -125,7 +129,7 @@ class CommandFrame
         if (this->validate()) {
             return Option<DataType>(rawFrame.data);
         } else {
-            return Option<DataType>::None();
+            return std::nullopt;
         }
     }
 

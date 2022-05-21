@@ -1,10 +1,3 @@
-/**
- *
- * @file CRC.hpp
- * @author UoN-Lancet
- * @date Aug 15, 2021
- *
- */
 
 #ifndef  CRC_HPP
 #define  CRC_HPP
@@ -13,7 +6,6 @@
 #include <vector>
 
 typedef unsigned char byte_t;
-
 
 template <
     byte_t width, uint32_t polynomial,
@@ -39,8 +31,9 @@ class CRC
             if (doReflectData) {
                 byte_t reflection = 0x0;
                 for (byte_t bit = 0; bit < 8; bit++) {
-                    if ((dataByte & 1) == 1)
+                    if ((dataByte & 1) == 1) {
                         reflection |= (byte_t) (1 << (7 - bit));
+                    }
                     dataByte >>= 1;
                 }
                 return reflection;
@@ -55,8 +48,9 @@ class CRC
                 auto nbits = (byte_t) (width < 8 ? 8 : width);
 
                 for (byte_t bit = 0; bit < nbits; bit++) {
-                    if ((data & 1) == 1)
+                    if ((data & 1) == 1) {
                         reflection |= 1ul << ((nbits - 1) - bit);
+                    }
                     data >>= 1;
                 }
                 return reflection;
@@ -140,7 +134,7 @@ template <
     uint32_t polynomial,
     uint32_t initialXOR, uint32_t finalXOR,
     bool doReflectData = true, bool doReflectRemainder = true
-> using CRC8 = CRC<
+> using CRC8 = CRC <
     0x08, polynomial,
     initialXOR, finalXOR,
     doReflectData, doReflectRemainder
@@ -150,7 +144,7 @@ template <
     uint32_t polynomial,
     uint32_t initialXOR, uint32_t finalXOR,
     bool doReflectData = true, bool doReflectRemainder = true
-> using CRC16 = CRC<
+> using CRC16 = CRC <
     0x10, polynomial,
     initialXOR, finalXOR,
     doReflectData, doReflectRemainder

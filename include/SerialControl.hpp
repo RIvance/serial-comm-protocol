@@ -1,5 +1,5 @@
-#ifndef SERIAL_PORT_CONTROL
-#define SERIAL_PORT_CONTROL
+#ifndef SERIAL_CONTROL
+#define SERIAL_CONTROL
 
 #include <string>
 #include <vector>
@@ -118,4 +118,4 @@ EXPORT class SerialControl
     std::vector<unsigned char> receive(size_t size) const;
 };
 
-#endif // SERIAL_PORT_CONTROL
+#endif // SERIA_CONTROL
