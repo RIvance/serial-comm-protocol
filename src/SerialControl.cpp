@@ -1,7 +1,7 @@
 #include "serial/SerialControl.hpp"
+#include "serial/utils/Logger.hpp"
 
 #include <cstring>
-#include <cstdio>
 #include <cstdlib>
 
 #include <unistd.h>  /* UNIX standard function definitions */
@@ -10,10 +10,6 @@
 #include <sys/stat.h>
 
 #define func auto
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
 using byte_t = unsigned char;
 
@@ -49,7 +45,7 @@ func openPort(const char* tty, int cflag, int iflag, int oflag, int lflag) -> in
 
     if (fd == -1) {
         // Could not open the port.
-        perror(("open_port: Unable to open" + std::string(tty)).c_str());
+        logger::error("Unable to open serial device ", tty);
     } else {
         fcntl(fd, F_SETFL, 0);
     }
@@ -113,10 +109,6 @@ inline func _baud(int baudRate) -> int
 }
 
 #define BAUD(X) _baud(X)
-
-#ifdef __cplusplus
-  }; // end extern "C"
-#endif
 
 namespace serial
 {

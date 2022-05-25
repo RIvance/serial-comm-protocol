@@ -1,6 +1,7 @@
 
 #include "serial/CommHandle.hpp"
 #include "serial/command/CommandFrame.hpp"
+#include "serial/utils/Logger.hpp"
 
 #include <iostream>
 #include <thread>
@@ -41,14 +42,14 @@ namespace serial
         while (serialDevices.empty() || !this->serialPort.open(serialDevices.front(), baudRate)) {
             serialDevices = getDevices();
             if (serialDevices.empty()) {
-                std::cout << "No serial device found, retrying..." << std::endl;
+                logger::warning("No serial device found, retrying...");
                 std::this_thread::sleep_for(1000ms);
                 continue;
             }
-            std::cout << "Unable to serial device " << serialDevices.front() << ", retrying..." << std::endl;
+            logger::error("Unable to open serial device ", serialDevices.front(), ", retrying...");
             std::this_thread::sleep_for(1000ms);
         }
-        std::cout << "Successfully connected to serial device " << serialDevices.front() << std::endl;
+        logger::info("Successfully connected to serial device ", serialDevices.front());
     }
 
     CommHandle::CommHandle(const SerialControl & serialPortControl, byte_t sof)
@@ -61,10 +62,10 @@ namespace serial
     {
         this->sof = sof;
         while (!this->serialPort.open(serialDevice, baudRate)) {
-            std::cout << "Unable to open serial device " << serialDevice << ", retrying..." << std::endl;
+            logger::error("Unable to open serial device ", serialDevice, ", retrying...");
             std::this_thread::sleep_for(1000ms);
         }
-        std::cout << "Successfully connected to serial device " << serialDevice << std::endl;
+        logger::info("Successfully connected to serial device ", serialDevice);
     }
 
     func CommHandle::startReceiving() -> bool
@@ -143,8 +144,7 @@ namespace serial
 
             int offset = 0;
 
-            auto readToInt16 = [&offset](uint16_t* dst, byte_t src)
-            {
+            auto readToInt16 = [&offset](uint16_t* dst, byte_t src) {
                 reinterpret_cast<byte_t*>(dst)[offset++] = src;
             };
 
@@ -238,7 +238,12 @@ namespace serial
                                 offset = 0;
                                 state = SOF;
                                 if (!abandonFrame && crc16Iter.getValue() == crc16Value) {
-                                    subscribers[command]->receive(dataBuffer.data());
+                                    if (subscribers.find(command) != subscribers.end()) {
+                                        logger::debug("Calling subscriber callback for command id ", command);
+                                        subscribers[command]->receive(dataBuffer.data());
+                                    } else {
+                                        logger::warning("No subscriber for command id ", command);
+                                    }
                                 }
                                 crc16Value = 0;
                                 dataBuffer.clear();
