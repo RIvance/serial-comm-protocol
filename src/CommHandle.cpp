@@ -69,13 +69,35 @@ namespace serial
 
     func CommHandle::startReceiving() -> bool
     {
-        this->receivingDaemonThread = Thread(receivingDaemon());
-        if (receivingDaemonThread.joinable()) {
-            receivingDaemonThread.join();
-            return true;
-        } else {
-            return false;
+        if (!this->isReceiving()) {
+            this->receivingDaemonThread = Thread(receivingDaemon());
+            if (receivingDaemonThread.joinable()) {
+                receivingDaemonThread.join();
+                return (this->receivingState = true);
+            } else {
+                return false;
+            }
         }
+        return true;
+    }
+
+    func CommHandle::startReceivingAsync() -> bool
+    {
+        if (!this->isReceiving()) {
+            this->receivingDaemonThread = Thread(receivingDaemon());
+            if (receivingDaemonThread.joinable()) {
+                receivingDaemonThread.detach();
+                return (this->receivingState = true);
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    func CommHandle::isReceiving() const -> bool
+    {
+        return this->receivingState;
     }
 
     func CommHandle::getReceivingDaemonThread() -> Thread&

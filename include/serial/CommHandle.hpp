@@ -30,6 +30,7 @@ namespace serial
 
         SerialControl serialPort{};
         byte_t sof = 0x05;
+        bool receivingState = false;
 
         struct SubscriberBase
         {
@@ -144,6 +145,8 @@ namespace serial
         }
 
         bool startReceiving();
+        bool startReceivingAsync();
+        bool isReceiving() const;
 
         Thread & getReceivingDaemonThread();
     };
