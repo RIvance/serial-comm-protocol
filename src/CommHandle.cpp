@@ -51,6 +51,12 @@ namespace serial
         this->serialPort = serialPortControl;
     }
 
+    CommHandle::~CommHandle()
+    {
+        this->stopReceiving();
+        this->serialPort.close();
+    }
+
     func CommHandle::openSerialDevice(const String & device, int baud, byte_t sof) -> void
     {
         this->sof = sof;
@@ -69,12 +75,10 @@ namespace serial
     func CommHandle::autoConnect(int baud) -> void
     {
         std::vector<String> serialDevices = getDevices();
-        while (serialDevices.empty()) {
+        while (serialDevices.empty() || !this->serialPort.open(serialDevices.front(), baud)) {
             serialDevices = getDevices();
             if (serialDevices.empty()) {
                 logger::warning("No serial device found, retrying...");
-                std::this_thread::sleep_for(1000ms);
-                continue;
             } else if (!this->serialPort.open(serialDevices.front(), baud)) {
                 logger::error("Unable to open serial device ", serialDevices.front(), ", retrying...");
             }
@@ -85,11 +89,16 @@ namespace serial
 
     func CommHandle::reconnect() -> void
     {
-        if (this->serialDevice.empty()) {
-            this->autoConnect(this->baudRate);
-        } else {
-            this->connect(this->serialDevice, this->baudRate);
+        this->reconnectionMutex.lock();
+        if (!this->serialPort.isOpen()) {
+            logger::info("Reconnecting...");
+            if (this->serialDevice.empty()) {
+                this->autoConnect(this->baudRate);
+            } else {
+                this->connect(this->serialDevice, this->baudRate);
+            }
         }
+        this->reconnectionMutex.unlock();
     }
 
     func CommHandle::startReceiving() -> bool
@@ -177,19 +186,18 @@ namespace serial
 
                 size_t received = 0;
 
-                this->serialPortMutex.lock();
+                this->recvMutex.lock();
                 try {
                     received = this->serialPort.receive(buffer, BUFFER_SIZE);
                 } catch (SerialClosedException & exception) {
                     logger::error("Serial device connection closed");
                     if (this->doReconnect) {
-                        logger::info("Reconnecting...");
                         this->reconnect();
                     } else {
                         throw serial::SerialClosedException();
                     }
                 }
-                this->serialPortMutex.unlock();
+                this->recvMutex.unlock();
 
                 if (received == -1) {
                     continue;
