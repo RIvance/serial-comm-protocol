@@ -8,29 +8,30 @@
 
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 namespace serial
 {
     #define func auto
-
-    template <typename T>
-    using Ref = std::shared_ptr<T>;
-
-    template <typename Signature>
-    using Function = std::function<Signature>;
-
-    template <typename K, typename V>
-    using HashMap = std::unordered_map<K, V>;
-
-    using Mutex = std::mutex;
-    using Thread = std::thread;
-    using AtomicBool = std::atomic_bool;
 
     using namespace command;
 
     class CommHandle
     {
       private:
+
+        template <typename T>
+        using Ref = std::shared_ptr<T>;
+
+        template <typename Signature>
+        using Function = std::function<Signature>;
+
+        template <typename K, typename V>
+        using HashMap = std::unordered_map<K, V>;
+
+        using Mutex = std::mutex;
+        using Thread = std::thread;
+        using AtomicBool = std::atomic_bool;
 
         SerialControl serialPort {};
         byte_t sof = 0x05;
@@ -41,6 +42,8 @@ namespace serial
         AtomicBool doReconnect = false;
         AtomicBool receivingStateFlag = false;
 
+        Mutex reconnectionMutex;
+
         struct SubscriberBase
         {
             virtual uint16_t cmd() = 0;
@@ -50,7 +53,8 @@ namespace serial
         using SubscriberPtr = Ref<SubscriberBase>;
         HashMap<uint16_t, SubscriberPtr> subscribers;
 
-        Mutex serialPortMutex;
+        Mutex sendMutex;
+        Mutex recvMutex;
         Thread receivingDaemonThread;
 
         Function<void()> receivingDaemon();
@@ -82,20 +86,19 @@ namespace serial
             func publish(const CmdData & data) -> bool
             {
                 CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data, handle->sof);
-                handle->serialPortMutex.lock();
+                handle->sendMutex.lock();
                 int sent = 0;
                 try {
                     sent = handle->serialPort.send(commandFrame.toBytes());
                 } catch (serial::SerialClosedException & exception) {
                     logger::error("Serial device connection closed");
                     if (handle->doReconnect) {
-                        logger::info("Reconnecting...");
                         this->handle->reconnect();
                     } else {
                         throw serial::SerialClosedException();
                     }
                 }
-                handle->serialPortMutex.unlock();
+                handle->sendMutex.unlock();
                 return sent == sizeof(CmdData);
             }
         };
@@ -139,6 +142,8 @@ namespace serial
         explicit CommHandle(const String & serialDevice, int baudRate = B115200, byte_t sof = 0x05);
 
         explicit CommHandle(int baudRate = B115200, byte_t sof = 0x05);
+
+        ~CommHandle();
 
         void connect(const String & device, int baud = B115200);
 
