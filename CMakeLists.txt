@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(serial)
 
-set(DEBUG               true)
+set(DEBUG               false)
 set(OPTIMIZATION        false)
 set(ABANDON_SAME_FRAME  false)
 
