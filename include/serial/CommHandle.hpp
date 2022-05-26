@@ -91,6 +91,8 @@ namespace serial
                     if (handle->doReconnect) {
                         logger::info("Reconnecting...");
                         this->handle->reconnect();
+                    } else {
+                        throw serial::SerialClosedException();
                     }
                 }
                 handle->serialPortMutex.unlock();

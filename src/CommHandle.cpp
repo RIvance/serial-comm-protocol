@@ -69,14 +69,15 @@ namespace serial
     func CommHandle::autoConnect(int baud) -> void
     {
         std::vector<String> serialDevices = getDevices();
-        while (serialDevices.empty() || !this->serialPort.open(serialDevices.front(), baud)) {
+        while (serialDevices.empty()) {
             serialDevices = getDevices();
             if (serialDevices.empty()) {
                 logger::warning("No serial device found, retrying...");
                 std::this_thread::sleep_for(1000ms);
                 continue;
+            } else if (!this->serialPort.open(serialDevices.front(), baud)) {
+                logger::error("Unable to open serial device ", serialDevices.front(), ", retrying...");
             }
-            logger::error("Unable to open serial device ", serialDevices.front(), ", retrying...");
             std::this_thread::sleep_for(1000ms);
         }
         logger::info("Successfully connected to serial device ", serialDevices.front());
@@ -184,6 +185,8 @@ namespace serial
                     if (this->doReconnect) {
                         logger::info("Reconnecting...");
                         this->reconnect();
+                    } else {
+                        throw serial::SerialClosedException();
                     }
                 }
                 this->serialPortMutex.unlock();

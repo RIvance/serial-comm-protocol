@@ -59,7 +59,7 @@ func openPort(const char* tty, int cflag, int iflag, int oflag, int lflag) -> in
 inline func fileAccessible(int fd) -> bool
 {
     struct stat buf {};
-    return fstat(fd, &buf) != -1;
+    return fstat(fd, &buf) == 0 && buf.st_nlink >= 1;
 }
 
 inline func _baud(int baudRate) -> int
