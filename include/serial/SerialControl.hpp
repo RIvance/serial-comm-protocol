@@ -17,7 +17,7 @@ namespace serial
     {
       public:
         [[nodiscard]]
-        const char* what() const _GLIBCXX_TXN_SAFE_DYN _GLIBCXX_NOTHROW override
+        const char* what() const noexcept override
         {
             return "serial port is not open or is closed";
         }
@@ -53,6 +53,7 @@ namespace serial
          * Check if the port is open
          * @return
          */
+        [[nodiscard]]
         bool isOpen() const;
 
         /**
@@ -129,4 +130,4 @@ namespace serial
     };
 }
 
-#endif // SERIA_CONTROL
+#endif // SERIAL_CONTROL

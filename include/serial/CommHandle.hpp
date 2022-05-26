@@ -4,6 +4,7 @@
 
 #include "serial/SerialControl.hpp"
 #include "serial/command/CommandFrame.hpp"
+#include "serial/utils/Logger.hpp"
 
 #include <thread>
 #include <mutex>
@@ -11,7 +12,6 @@
 namespace serial
 {
     #define func auto
-    #define EMPTY_STATEMENT { }
 
     template <typename T>
     using Ref = std::shared_ptr<T>;
@@ -19,8 +19,12 @@ namespace serial
     template <typename Signature>
     using Function = std::function<Signature>;
 
+    template <typename K, typename V>
+    using HashMap = std::unordered_map<K, V>;
+
     using Mutex = std::mutex;
     using Thread = std::thread;
+    using AtomicBool = std::atomic_bool;
 
     using namespace command;
 
@@ -28,9 +32,14 @@ namespace serial
     {
       private:
 
-        SerialControl serialPort{};
+        SerialControl serialPort {};
         byte_t sof = 0x05;
-        bool receivingState = false;
+
+        int baudRate;
+        String serialDevice;
+
+        AtomicBool doReconnect = false;
+        AtomicBool receivingStateFlag = false;
 
         struct SubscriberBase
         {
@@ -39,7 +48,7 @@ namespace serial
         };
 
         using SubscriberPtr = Ref<SubscriberBase>;
-        std::unordered_map<uint16_t, SubscriberPtr> subscribers;
+        HashMap<uint16_t, SubscriberPtr> subscribers;
 
         Mutex serialPortMutex;
         Thread receivingDaemonThread;
@@ -53,9 +62,7 @@ namespace serial
         {
           private:
 
-            SerialControl* serialPort;
-            Mutex* serialPortMutex;
-            byte_t sof;
+            CommHandle* handle;
 
             func cmd() -> uint16_t
             {
@@ -68,25 +75,25 @@ namespace serial
 
             Publisher() = default;
 
-            Publisher(const Publisher & another)
-                : serialPort(another.port), serialPortMutex(another.mutex), sof(sof)
-            { EMPTY_STATEMENT }
+            Publisher(const Publisher & another) : handle(another.handle) {}
 
-            explicit Publisher(SerialControl* port, Mutex* mutex, byte_t sof = 0x05)
-                : serialPort(port), serialPortMutex(mutex), sof(sof)
-            { EMPTY_STATEMENT }
+            explicit Publisher(CommHandle* handle) : handle(handle) {}
 
             func publish(const CmdData & data) -> bool
             {
-                CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data, this->sof);
-                this->serialPortMutex->lock();
+                CommandFrame<CmdData> commandFrame = CommandFrame<CmdData>(this->cmd(), data, handle->sof);
+                handle->serialPortMutex.lock();
                 int sent = 0;
                 try {
-                    sent = this->serialPort->send(commandFrame.toBytes());
+                    sent = handle->serialPort.send(commandFrame.toBytes());
                 } catch (serial::SerialClosedException & exception) {
-                    this->serialPort = new SerialControl(*serialPort);
+                    logger::error("Serial device connection closed");
+                    if (handle->doReconnect) {
+                        logger::info("Reconnecting...");
+                        this->handle->reconnect();
+                    }
                 }
-                this->serialPortMutex->unlock();
+                handle->serialPortMutex.unlock();
                 return sent == sizeof(CmdData);
             }
         };
@@ -111,9 +118,7 @@ namespace serial
 
           public:
 
-            explicit Subscriber(Callback<CmdData> callback)
-                : callback(callback)
-            { EMPTY_STATEMENT }
+            explicit Subscriber(Callback<CmdData> callback) : callback(callback) {}
 
             func cmd() -> uint16_t override
             {
@@ -121,7 +126,9 @@ namespace serial
             }
         };
 
-        void openSerialDevice(const String & serialDevice, int baudRate, byte_t sof = 0x05);
+        void openSerialDevice(const String & device, int baud, byte_t sof = 0x05);
+
+        void reconnect();
 
       public:
 
@@ -131,10 +138,14 @@ namespace serial
 
         explicit CommHandle(int baudRate = B115200, byte_t sof = 0x05);
 
+        void connect(const String & device, int baud = B115200);
+
+        void autoConnect(int baud = B115200);
+
         template <uint16_t Cmd, typename CmdData>
         Publisher<Cmd, CmdData> advertise()
         {
-            return CommHandle::Publisher<Cmd, CmdData>(&this->serialPort, &this->serialPortMutex);
+            return CommHandle::Publisher<Cmd, CmdData>(this);
         }
 
         template <uint16_t Cmd, typename CmdData>
@@ -146,13 +157,26 @@ namespace serial
 
         bool startReceiving();
         bool startReceivingAsync();
-        bool isReceiving() const;
+
+        inline void stopReceiving()
+        {
+            this->receivingStateFlag = false;
+        }
 
         Thread & getReceivingDaemonThread();
+
+        inline bool isReceiving() const
+        {
+            return this->receivingStateFlag;
+        }
+
+        inline void setReconnect(bool value)
+        {
+            this->doReconnect = value;
+        }
     };
 
     #undef func
-    #undef EMPTY_STATEMENT
 }
 
 #endif // SERIAL_COMM_HANDLE_HPP

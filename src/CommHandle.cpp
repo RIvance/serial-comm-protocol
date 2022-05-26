@@ -32,14 +32,44 @@ namespace serial
 
     CommHandle::CommHandle(const String & serialDevice, int baudRate, byte_t sof)
     {
+        this->baudRate = baudRate;
         this->openSerialDevice(serialDevice, baudRate, sof);
     }
 
     CommHandle::CommHandle(int baudRate, byte_t sof)
     {
         this->sof = sof;
+        this->baudRate = baudRate;
+        this->autoConnect(baudRate);
+    }
+
+    CommHandle::CommHandle(const SerialControl & serialPortControl, byte_t sof)
+    {
+        this->sof = sof;
+        this->baudRate = B115200;
+        this->doReconnect = false;
+        this->serialPort = serialPortControl;
+    }
+
+    func CommHandle::openSerialDevice(const String & device, int baud, byte_t sof) -> void
+    {
+        this->sof = sof;
+        this->connect(device, baud);
+    }
+
+    func CommHandle::connect(const String & device, int baud) -> void
+    {
+        while (!this->serialPort.open(device, baud)) {
+            logger::error("Unable to open serial device ", device, ", retrying...");
+            std::this_thread::sleep_for(1000ms);
+        }
+        logger::info("Successfully connected to serial device ", device);
+    }
+
+    func CommHandle::autoConnect(int baud) -> void
+    {
         std::vector<String> serialDevices = getDevices();
-        while (serialDevices.empty() || !this->serialPort.open(serialDevices.front(), baudRate)) {
+        while (serialDevices.empty() || !this->serialPort.open(serialDevices.front(), baud)) {
             serialDevices = getDevices();
             if (serialDevices.empty()) {
                 logger::warning("No serial device found, retrying...");
@@ -52,20 +82,13 @@ namespace serial
         logger::info("Successfully connected to serial device ", serialDevices.front());
     }
 
-    CommHandle::CommHandle(const SerialControl & serialPortControl, byte_t sof)
+    func CommHandle::reconnect() -> void
     {
-        this->sof = sof;
-        this->serialPort = serialPortControl;
-    }
-
-    func CommHandle::openSerialDevice(const String & serialDevice, int baudRate, byte_t sof) -> void
-    {
-        this->sof = sof;
-        while (!this->serialPort.open(serialDevice, baudRate)) {
-            logger::error("Unable to open serial device ", serialDevice, ", retrying...");
-            std::this_thread::sleep_for(1000ms);
+        if (this->serialDevice.empty()) {
+            this->autoConnect(this->baudRate);
+        } else {
+            this->connect(this->serialDevice, this->baudRate);
         }
-        logger::info("Successfully connected to serial device ", serialDevice);
     }
 
     func CommHandle::startReceiving() -> bool
@@ -73,8 +96,9 @@ namespace serial
         if (!this->isReceiving()) {
             this->receivingDaemonThread = Thread(receivingDaemon());
             if (receivingDaemonThread.joinable()) {
+                this->receivingStateFlag = true;
                 receivingDaemonThread.join();
-                return (this->receivingState = true);
+                return this->receivingStateFlag;
             } else {
                 return false;
             }
@@ -87,18 +111,14 @@ namespace serial
         if (!this->isReceiving()) {
             this->receivingDaemonThread = Thread(receivingDaemon());
             if (receivingDaemonThread.joinable()) {
+                this->receivingStateFlag = true;
                 receivingDaemonThread.detach();
-                return (this->receivingState = true);
+                return this->receivingStateFlag;
             } else {
                 return false;
             }
         }
         return true;
-    }
-
-    func CommHandle::isReceiving() const -> bool
-    {
-        return this->receivingState;
     }
 
     func CommHandle::getReceivingDaemonThread() -> Thread&
@@ -108,7 +128,7 @@ namespace serial
 
     func CommHandle::receivingDaemon() -> Function<void()>
     {
-        return [this]() __attribute__((__noreturn__)) -> void
+        return [this]() -> void
         {
             const size_t BUFFER_SIZE = 1024;
             byte_t buffer[BUFFER_SIZE];
@@ -150,8 +170,22 @@ namespace serial
 
             while (true) {
 
+                if (!this->receivingStateFlag) {
+                    return;
+                }
+
+                size_t received = 0;
+
                 this->serialPortMutex.lock();
-                size_t received = this->serialPort.receive(buffer, BUFFER_SIZE);
+                try {
+                    received = this->serialPort.receive(buffer, BUFFER_SIZE);
+                } catch (SerialClosedException & exception) {
+                    logger::error("Serial device connection closed");
+                    if (this->doReconnect) {
+                        logger::info("Reconnecting...");
+                        this->reconnect();
+                    }
+                }
                 this->serialPortMutex.unlock();
 
                 if (received == -1) {

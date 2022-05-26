@@ -126,7 +126,7 @@ namespace serial
 
     func SerialControl::send(void* data, size_t size) const -> int
     {
-        if (this->isOpen()) {
+        if (!this->isOpen()) {
             throw SerialClosedException();
         }
         ssize_t bytesWritten = ::write(this->fileDescriptor, data, size);
@@ -190,6 +190,9 @@ namespace serial
 
     func SerialControl::receive(void *data, size_t size) const -> int
     {
+        if (!this->isOpen()) {
+            throw SerialClosedException();
+        }
         return (int) read(this->fileDescriptor, data, size);
     }
 
