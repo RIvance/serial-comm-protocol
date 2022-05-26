@@ -34,6 +34,9 @@ namespace logger
 
     namespace format
     {
+        using namespace std::chrono;
+        using SysClock = std::chrono::system_clock;
+
         static inline void printErrLn() { std::cerr << '\n'; }
 
         template<typename T, typename ... Ts>
@@ -60,10 +63,13 @@ namespace logger
 
         static inline string timeString()
         {
-            time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            tm timeinfo = *std::localtime(&now);
+            std::stringstream timeFormat;
             char buffer[64];
-            std::strftime(buffer, sizeof(buffer),"%Y-%m-%d %H:%M:%S", &timeinfo);
+            auto now = SysClock::now();
+            long millisecond = duration_cast<milliseconds>(now.time_since_epoch()).count() % 1000;
+            timeFormat << "%Y-%m-%d %H:%M:%S." << std::setw(3) << std::setfill('0') << millisecond;
+            time_t timeNow = SysClock::to_time_t(now);
+            std::strftime(buffer, sizeof(buffer), timeFormat.str().c_str(), std::localtime(&timeNow));
             return buffer;
         }
     }

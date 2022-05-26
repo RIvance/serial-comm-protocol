@@ -59,7 +59,7 @@ func openPort(const char* tty, int cflag, int iflag, int oflag, int lflag) -> in
 inline func fileAccessible(int fd) -> bool
 {
     struct stat buf {};
-    return fstat(fd, &buf) != -1;
+    return fstat(fd, &buf) == 0 && buf.st_nlink >= 1;
 }
 
 inline func _baud(int baudRate) -> int
@@ -126,7 +126,7 @@ namespace serial
 
     func SerialControl::send(void* data, size_t size) const -> int
     {
-        if (this->isOpen()) {
+        if (!this->isOpen()) {
             throw SerialClosedException();
         }
         ssize_t bytesWritten = ::write(this->fileDescriptor, data, size);
@@ -190,6 +190,9 @@ namespace serial
 
     func SerialControl::receive(void *data, size_t size) const -> int
     {
+        if (!this->isOpen()) {
+            throw SerialClosedException();
+        }
         return (int) read(this->fileDescriptor, data, size);
     }
 
