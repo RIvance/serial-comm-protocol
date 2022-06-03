@@ -32,12 +32,16 @@ namespace serial
 
     CommHandle::CommHandle(const String & serialDevice, int baudRate, byte_t sof)
     {
+        this->receivingStateFlag.store(false);
+        this->doReconnect.store(false);
         this->baudRate = baudRate;
         this->openSerialDevice(serialDevice, baudRate, sof);
     }
 
     CommHandle::CommHandle(int baudRate, byte_t sof)
     {
+        this->receivingStateFlag.store(false);
+        this->doReconnect.store(false);
         this->sof = sof;
         this->baudRate = baudRate;
         this->autoConnect(baudRate);
@@ -45,6 +49,8 @@ namespace serial
 
     CommHandle::CommHandle(const SerialControl & serialPortControl, byte_t sof)
     {
+        this->receivingStateFlag.store(false);
+        this->doReconnect.store(false);
         this->sof = sof;
         this->baudRate = B115200;
         this->doReconnect = false;
