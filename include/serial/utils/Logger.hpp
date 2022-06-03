@@ -13,16 +13,16 @@ namespace logger
 
     namespace level
     {
-        enum LogLevel : unsigned char
+        enum LogLevel : uint8_t
         {
-            NONE    =   0,
-            ERROR   =   1,
-            WARNING =   2,
-            INFO    =   3,
-            DEBUG   =   4,
+            LOG_NONE    =   0,
+            LOG_ERROR   =   1,
+            LOG_WARNING =   2,
+            LOG_INFO    =   3,
+            LOG_DEBUG   =   4,
         };
 
-        static LogLevel level = INFO;
+        static LogLevel level = LOG_DEBUG;
     }
 
     using level::LogLevel;
@@ -32,18 +32,22 @@ namespace logger
         logger::level::level = lvl;
     }
 
-    namespace format
+    namespace io
     {
         using namespace std::chrono;
         using SysClock = std::chrono::system_clock;
+        using StrStream = std::stringstream;
 
-        static inline void printErrLn() { std::cerr << '\n'; }
+        static inline void printErrLn(StrStream & stream)
+        {
+            std::cerr << stream.str() << '\n';
+        }
 
         template<typename T, typename ... Ts>
-        static inline void printErrLn(const T & first, Ts ... tail)
+        static void printErrLn(StrStream & stream, const T & first, const Ts &... tail)
         {
-            std::cerr << first;
-            printErrLn(tail...);
+            stream << first;
+            printErrLn(stream, tail...);
         }
 
       #define COLOR_DEF(color, code)  static const char* color = "\033[0;" #code "m"
@@ -58,12 +62,12 @@ namespace logger
 
         static inline string colorString(const string & s, const char* color)
         {
-            return color + s + "\033[0m";
+            return string(color) + s + "\033[0m";
         }
 
         static inline string timeString()
         {
-            std::stringstream timeFormat;
+            StrStream timeFormat;
             char buffer[64];
             auto now = SysClock::now();
             long millisecond = duration_cast<milliseconds>(now.time_since_epoch()).count() % 1000;
@@ -72,47 +76,51 @@ namespace logger
             std::strftime(buffer, sizeof(buffer), timeFormat.str().c_str(), std::localtime(&timeNow));
             return buffer;
         }
-    }
 
-    template<typename ... Ts>
-    static inline void log(const string & label, const char* color, Ts ... args)
-    {
-        std::cerr << format::colorString("[", format::BLUE);
-        std::cerr << format::colorString(label, color);
-        std::cerr << format::timeString() << " ";
-        std::cerr << format::colorString("]", format::BLUE) << " ";
-        format::printErrLn(args...);
-    }
-
-    template<typename ... Ts>
-    static inline void debug(Ts ... args)
-    {
-        if (logger::level::level >= logger::level::DEBUG) {
-            logger::log(" DEBUG ", format::CYAN, args...);
+        template<typename ... Ts>
+        static inline void log(const string & label, const char* color, const Ts &... args)
+        {
+            StrStream stream;
+            stream << io::colorString("[", io::BLUE);
+            stream << io::colorString(label, color);
+          #ifdef _GLIBCXX_THREAD
+            stream << "T" << std::this_thread::get_id() << " ";
+          #endif
+            stream << io::timeString() << " ";
+            stream << io::colorString("]", io::BLUE) << " ";
+            io::printErrLn(stream, args...);
         }
     }
 
     template<typename ... Ts>
-    static inline void info(Ts ... args)
+    static inline void debug(const Ts &... args)
     {
-        if (logger::level::level >= logger::level::INFO) {
-            logger::log(" INFO  ", format::GREEN, args...);
+        if (logger::level::level >= logger::level::LOG_DEBUG) {
+            logger::io::log(" DEBUG ", io::CYAN, args...);
         }
     }
 
     template<typename ... Ts>
-    static inline void warning(Ts ... args)
+    static inline void info(const Ts &... args)
     {
-        if (logger::level::level >= logger::level::WARNING) {
-            logger::log(" WARN  ", format::YELLOW, args...);
+        if (logger::level::level >= logger::level::LOG_INFO) {
+            logger::io::log(" INFO  ", io::GREEN, args...);
         }
     }
 
     template<typename ... Ts>
-    static inline void error(Ts ... args)
+    static inline void warning(const Ts &... args)
     {
-        if (logger::level::level >= logger::level::ERROR) {
-            logger::log(" ERROR ", format::RED, args...);
+        if (logger::level::level >= logger::level::LOG_WARNING) {
+            logger::io::log(" WARN  ", io::YELLOW, args...);
+        }
+    }
+
+    template<typename ... Ts>
+    static inline void error(const Ts &... args)
+    {
+        if (logger::level::level >= logger::level::LOG_ERROR) {
+            logger::io::log(" ERROR ", io::RED, args...);
         }
     }
 }
