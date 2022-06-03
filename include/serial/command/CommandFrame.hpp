@@ -7,6 +7,10 @@
 #include <functional>
 #include <cstdint>
 
+#if __cplusplus >= 201703L
+  #include <optional>
+#endif
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
 | Field | Offset   | Length (bytes) | Description                                           |
 | ----- | -------- | -------------- | ----------------------------------------------------- |
@@ -19,7 +23,11 @@
 | CRC16 | 7 + DLEN | 2              | p = 0x1021, init = 0xFFFF, reflect data and remainder |
 \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-namespace serial::command
+#if __cplusplus >= 201703L
+  namespace serial::command
+#else
+  namespace serial { namespace command
+#endif
 {
     #pragma pack(push, 1)
 
@@ -49,9 +57,9 @@ namespace serial::command
     {
       protected:
 
-        using Self = CommandFrame<DataType>;
+        using RawFrame = RawCommandFrame<DataType>;
 
-        RawCommandFrame<DataType> rawFrame;
+        RawFrame rawFrame;
         byte_t sof = 0x00;
 
         [[nodiscard]]
@@ -92,14 +100,16 @@ namespace serial::command
             return sizeof(RawCommandFrame<DataType>);
         }
 
-        static std::optional<DataType> parse(const std::vector<byte_t> & data, byte_t sof = 0x05)
+      #if __cplusplus >= 201703L
+
+        static std::optional<DataType> parse(const std::vector<byte_t> & frameData, byte_t sof = 0x05)
         {
-            if (data.size() != frameSize() || data[0] != sof) {
+            if (frameData.size() != frameSize() || frameData[0] != sof) {
                 return std::nullopt;
             } else {
                 CommandFrame<DataType> frame;
                 frame.sof = sof;
-                frame.rawFrame = *reinterpret_cast<const RawCommandFrame<DataType>*>(data.data());
+                frame.rawFrame = *reinterpret_cast<const RawCommandFrame<DataType>*>(frameData.data());
                 if (frame.validate()) {
                     return std::optional<DataType>(frame.getData());
                 } else {
@@ -107,6 +117,27 @@ namespace serial::command
                 }
             }
         }
+
+      #else
+
+        static bool parse(const std::vector<byte_t> & frameData, DataType & output, byte_t sof = 0x05)
+        {
+            if (frameData.size() != frameSize() || frameData[0] != sof) {
+                return false;
+            } else {
+                CommandFrame<DataType> frame;
+                frame.sof = sof;
+                frame.rawFrame = *reinterpret_cast<const RawCommandFrame<DataType>*>(frameData.data());
+                if (frame.validate()) {
+                    output = frame.getData();
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+      #endif
 
         RawCommandFrame<DataType> getFrame() const
         {
@@ -123,6 +154,8 @@ namespace serial::command
             );
         }
 
+      #if __cplusplus >= 201703L
+
         std::optional<DataType> getData() const
         {
             if (this->validate()) {
@@ -132,10 +165,22 @@ namespace serial::command
             }
         }
 
+      #endif
+
+        bool getData(DataType & output) const
+        {
+            if (this->validate()) {
+                output = rawFrame.data;
+                return true;
+            } else {
+                return false;
+            }
+        }
+
         [[nodiscard]]
         std::vector<byte_t> toBytes() const
         {
-            std::vector<byte_t> bytes(sizeof(rawFrame));
+            std::vector<byte_t> bytes(sizeof(RawFrame));
             const auto* ptr = reinterpret_cast<const byte_t*>(&rawFrame);
             for (size_t i = 0; i < bytes.size(); i++, ptr++) {
                 bytes[i] = *ptr;
@@ -144,3 +189,7 @@ namespace serial::command
         }
     };
 }
+
+#if __cplusplus < 201703L
+}
+#endif

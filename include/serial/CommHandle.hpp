@@ -8,6 +8,7 @@
 
 #include <thread>
 #include <mutex>
+#include <unordered_map>
 
 namespace serial
 {
@@ -38,8 +39,8 @@ namespace serial
         int baudRate;
         String serialDevice;
 
-        AtomicBool doReconnect = false;
-        AtomicBool receivingStateFlag = false;
+        AtomicBool doReconnect;
+        AtomicBool receivingStateFlag;
 
         struct SubscriberBase
         {
