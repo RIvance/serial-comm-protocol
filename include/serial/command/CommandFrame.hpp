@@ -54,11 +54,13 @@ namespace serial::command
         RawCommandFrame<DataType> rawFrame;
         byte_t sof = 0x00;
 
+        [[nodiscard]]
         inline uint8_t crc8() const
         {
             return CommandFrameUtils::Crc8::compute((byte_t *) &rawFrame, 4);
         }
 
+        [[nodiscard]]
         inline uint16_t crc16() const
         {
             return CommandFrameUtils::Crc16::compute((byte_t *) &rawFrame, 7 + rawFrame.dataLength);
@@ -111,6 +113,7 @@ namespace serial::command
             return rawFrame;
         }
 
+        [[nodiscard]]
         bool validate() const
         {
             return (
@@ -129,14 +132,15 @@ namespace serial::command
             }
         }
 
+        [[nodiscard]]
         std::vector<byte_t> toBytes() const
         {
-            std::vector<byte_t> bytes(sizeof(Self));
+            std::vector<byte_t> bytes(sizeof(rawFrame));
             const auto* ptr = reinterpret_cast<const byte_t*>(&rawFrame);
             for (size_t i = 0; i < bytes.size(); i++, ptr++) {
                 bytes[i] = *ptr;
             }
-            return std::move(bytes);
+            return bytes;
         }
     };
 }
