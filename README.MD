@@ -1,4 +1,4 @@
-# Serial Comm Control
+# Serial Comm Protocol
 
 ### A ROS-like lightweight serial device communication library.
 
