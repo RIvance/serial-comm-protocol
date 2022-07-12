@@ -35,7 +35,7 @@ int main()
 ### Subscriber
 
 ```c++
-#include "CommHandle.hpp"
+#include "serial/CommHandle.hpp"
 #include <iostream>
 
 #define CMD_POS 0x0401
