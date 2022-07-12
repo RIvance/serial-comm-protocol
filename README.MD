@@ -1,14 +1,15 @@
 # Serial Comm Control
-### A lightweight library for serial port communication.
+
+### A ROS-like lightweight serial device communication library.
 
 ## Example
 
-### Sender
+### Publish
 
 ```c++
 #include "serial/CommHandle.hpp"
 
-#define CMD_POS 0x01 // command id
+#define CMD_POS 0x0401 // command id
 
 using namespace serial;
 
@@ -31,13 +32,13 @@ int main()
 }
 ```
 
-### Receiver
+### Subscriber
 
 ```c++
 #include "CommHandle.hpp"
 #include <iostream>
 
-#define CMD_POS 0x01
+#define CMD_POS 0x0401
 
 using namespace serial;
 

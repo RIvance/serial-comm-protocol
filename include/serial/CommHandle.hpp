@@ -34,7 +34,7 @@ namespace serial
         using AtomicBool = std::atomic_bool;
 
         SerialControl serialPort {};
-        byte_t sof = 0x05;
+        byte_t sof = 0xA5;
 
         int baudRate;
         String serialDevice;
@@ -131,17 +131,17 @@ namespace serial
             }
         };
 
-        void openSerialDevice(const String & device, int baud, byte_t sof = 0x05);
+        void openSerialDevice(const String & device, int baud, byte_t sof = 0xA5);
 
         void reconnect();
 
       public:
 
-        explicit CommHandle(const SerialControl & serialPortControl, byte_t sof = 0x05);
+        explicit CommHandle(const SerialControl & serialPortControl, byte_t sof = 0xA5);
 
-        explicit CommHandle(const String & serialDevice, int baudRate = B115200, byte_t sof = 0x05);
+        explicit CommHandle(const String & serialDevice, int baudRate = B115200, byte_t sof = 0xA5);
 
-        explicit CommHandle(int baudRate = B115200, byte_t sof = 0x05);
+        explicit CommHandle(int baudRate = B115200, byte_t sof = 0xA5);
 
         ~CommHandle();
 
@@ -180,6 +180,11 @@ namespace serial
         inline void setReconnect(bool value)
         {
             this->doReconnect = value;
+        }
+
+        inline void setSof(byte_t sofVal)
+        {
+            this->sof = sofVal;
         }
     };
 

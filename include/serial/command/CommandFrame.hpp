@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
 | Field | Offset   | Length (bytes) | Description                                           |
 | ----- | -------- | -------------- | ----------------------------------------------------- |
-| SOF   | 0        | 1              | Start of Frame, fixed to 0x05                         |
+| SOF   | 0        | 1              | Start of Frame, default = 0xA5                        |
 | DLEN  | 1        | 2              | Length of DATA, little-endian uint16_t                |
 | SEQ   | 3        | 1              | Sequence number                                       |
 | CRC8  | 4        | 1              | p = 0x31, init = 0xFF, reflect data and remainder     |
@@ -78,7 +78,7 @@
 
       public:
 
-        explicit CommandFrame(int commandId, const DataType & data, byte_t sof = 0x05)
+        explicit CommandFrame(int commandId, const DataType & data, byte_t sof = 0xA5)
         {
             this->sof = sof;
             this->rawFrame.sof = sof;
@@ -102,7 +102,7 @@
 
       #if __cplusplus >= 201703L
 
-        static std::optional<DataType> parse(const std::vector<byte_t> & frameData, byte_t sof = 0x05)
+        static std::optional<DataType> parse(const std::vector<byte_t> & frameData, byte_t sof = 0xA5)
         {
             if (frameData.size() != frameSize() || frameData[0] != sof) {
                 return std::nullopt;
@@ -120,7 +120,7 @@
 
       #else
 
-        static bool parse(const std::vector<byte_t> & frameData, DataType & output, byte_t sof = 0x05)
+        static bool parse(const std::vector<byte_t> & frameData, DataType & output, byte_t sof = 0xA5)
         {
             if (frameData.size() != frameSize() || frameData[0] != sof) {
                 return false;

@@ -155,7 +155,7 @@ namespace serial
             /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
             | Field | Offset   | Length (bytes) | Description                                          |
             | ----- | -------- | -------------- | ---------------------------------------------------- |
-            | SOF   | 0        | 1              | Start of Frame, fixed to 0x05                        |
+            | SOF   | 0        | 1              | Start of Frame, default = 0xA5                       |
             | DLEN  | 1        | 2              | Length of DATA, little-endian uint16_t               |
             | SEQ   | 3        | 1              | Sequence number                                      |
             | CRC8  | 4        | 1              | p = 0x31, init = 0xFF, reflect data &  remainder     |
