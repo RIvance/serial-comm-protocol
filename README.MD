@@ -4,7 +4,7 @@
 
 ## Example
 
-### Publish
+### Publisher
 
 ```c++
 #include "serial/CommHandle.hpp"
